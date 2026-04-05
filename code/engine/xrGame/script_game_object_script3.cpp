@@ -381,5 +381,6 @@ class_<CScriptGameObject> script_register_game_object2(class_<CScriptGameObject>
         .def("start_particles", &CScriptGameObject::start_particles)
         .def("stop_particles", &CScriptGameObject::stop_particles)
 		
-		.def("actor_torch_enabled", &CScriptGameObject::actor_torch_enabled);
+		.def("actor_torch_enabled", &CScriptGameObject::actor_torch_enabled)
+		.def("get_luminocity", &CScriptGameObject::get_luminocity);
 }

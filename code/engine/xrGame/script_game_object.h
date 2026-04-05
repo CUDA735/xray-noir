@@ -777,6 +777,7 @@ public:
     void unlock_door_for_npc();
     bool is_door_blocked_by_npc() const;
 	bool actor_torch_enabled() const;
+	float get_luminocity() const;
     bool is_weapon_going_to_be_strapped(CScriptGameObject const* object) const;
 
     doors::door* m_door;

@@ -1602,3 +1602,12 @@ bool CScriptGameObject::actor_torch_enabled() const {
 
     return pTorch->torch_active(); 
 }
+
+float CScriptGameObject::get_luminocity() const {
+    // Check whether the object has a Render Scanner
+    if (!object().ROS()) {
+        return 0.0f;
+    }
+    // Return the current light level
+    return object().ROS()->get_luminocity(); 
+}
