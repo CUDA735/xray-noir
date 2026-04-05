@@ -1,0 +1,17 @@
+*.ncb
+*.suo
+*.user
+*.sdf
+*.opensdf
+*.cache
+*.ipch
+*.db
+*.opendb
+.vs/
+
+build*/
+code/lib/
+code/pdb/
+bin/
+pdb/
+/VS
