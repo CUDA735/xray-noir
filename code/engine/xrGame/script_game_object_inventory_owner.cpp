@@ -6,6 +6,7 @@
 #include "script_game_object.h"
 #include "script_game_object_impl.h"
 #include "InventoryOwner.h"
+#include "Torch.h"
 #include "Pda.h"
 #include "xrMessages.h"
 #include "character_info.h"
@@ -1587,4 +1588,17 @@ bool CScriptGameObject::is_door_blocked_by_npc() const {
     VERIFY2(m_door, make_string("object %s hasn't been registered as a door already",
                                 m_game_object->cName().c_str()));
     return ai().doors().is_door_blocked(m_door);
+}
+
+bool CScriptGameObject::actor_torch_enabled() const {
+    CActor* pActor = smart_cast<CActor*>(&object());
+    if (!pActor) return false;
+
+    CInventoryItem* item = pActor->inventory().ItemFromSlot(TORCH_SLOT);
+    if (!item) return false;
+
+    CTorch* pTorch = smart_cast<CTorch*>(item);
+    if (!pTorch) return false;
+
+    return pTorch->torch_active(); 
 }
