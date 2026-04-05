@@ -95,6 +95,24 @@ void CScriptGameObject::GiveGameNews(LPCSTR caption, LPCSTR news, LPCSTR texture
     _give_news(caption, news, texture_name, delay, show_time, type);
 }
 
+void CScriptGameObject::GiveGameNewsSilent(LPCSTR caption, LPCSTR text, LPCSTR texture_name, int delay, int show_time) {
+    GAME_NEWS_DATA news_data;
+    news_data.m_type = (GAME_NEWS_DATA::eNewsType)0;
+    news_data.news_caption = caption;
+    news_data.news_text = text;
+    
+    if (show_time != 0)
+        news_data.show_time = show_time; 
+
+    VERIFY(xr_strlen(texture_name) > 0);
+    news_data.texture_name = texture_name;
+
+    // Pass false to disable on-screen display and sound
+    if (Actor()) {
+        Actor()->AddGameNews(news_data, false);
+    }
+}
+
 void _give_news(LPCSTR caption, LPCSTR text, LPCSTR texture_name, int delay, int show_time,
                 int type) {
     GAME_NEWS_DATA news_data;

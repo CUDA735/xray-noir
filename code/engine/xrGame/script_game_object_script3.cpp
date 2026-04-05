@@ -167,6 +167,8 @@ class_<CScriptGameObject> script_register_game_object2(class_<CScriptGameObject>
                                    &CScriptGameObject::GiveGameNews))
         .def("give_game_news", (void (CScriptGameObject::*)(LPCSTR, LPCSTR, LPCSTR, int, int, int))(
                                    &CScriptGameObject::GiveGameNews))
+        .def("give_game_news_silent", (void (CScriptGameObject::*)(LPCSTR, LPCSTR, LPCSTR, int, int))(
+                                   &CScriptGameObject::GiveGameNewsSilent))
 
         .def("give_talk_message",
              (void (CScriptGameObject::*)(LPCSTR, LPCSTR, LPCSTR))(

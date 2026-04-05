@@ -308,8 +308,8 @@ public:
     bool GiveInfoPortion(LPCSTR info_id);
     bool DisableInfoPortion(LPCSTR info_id);
     void GiveGameNews(LPCSTR caption, LPCSTR news, LPCSTR texture_name, int delay, int show_time);
-    void GiveGameNews(LPCSTR caption, LPCSTR news, LPCSTR texture_name, int delay, int show_time,
-                      int type);
+    void GiveGameNews(LPCSTR caption, LPCSTR news, LPCSTR texture_name, int delay, int show_time, int type);
+	void GiveGameNewsSilent(LPCSTR caption, LPCSTR news, LPCSTR texture_name, int delay, int show_time);
 
     void AddIconedTalkMessage_old(LPCSTR text, LPCSTR texture_name, LPCSTR templ_name){};
     void AddIconedTalkMessage(LPCSTR caption, LPCSTR text, LPCSTR texture_name, LPCSTR templ_name);
