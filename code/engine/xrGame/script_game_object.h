@@ -778,6 +778,8 @@ public:
     bool is_door_blocked_by_npc() const;
 	bool actor_torch_enabled() const;
 	float get_luminocity() const;
+	float get_suspicion_to_actor() const;
+	bool is_in_actor_sight() const;
     bool is_weapon_going_to_be_strapped(CScriptGameObject const* object) const;
 
     doors::door* m_door;

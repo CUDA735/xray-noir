@@ -7,6 +7,9 @@
 #include "script_game_object_impl.h"
 #include "InventoryOwner.h"
 #include "Torch.h"
+#include "visual_memory_manager.h"
+#include "memory_space.h"
+#include "actor_memory.h"
 #include "Pda.h"
 #include "xrMessages.h"
 #include "character_info.h"
@@ -1610,4 +1613,53 @@ float CScriptGameObject::get_luminocity() const {
     }
     // Return the current light level
     return object().ROS()->get_luminocity(); 
+}
+
+float CScriptGameObject::get_suspicion_to_actor() const {
+    CAI_Stalker* stalker = smart_cast<CAI_Stalker*>(&object());
+    if (!stalker || !Actor()) return 0.0f;
+
+    if (stalker->memory().visual().visible_now(Actor())) {
+        return 1.0f;
+    }
+
+    const CVisualMemoryManager::CNotYetVisibleObject* not_seen = stalker->memory().visual().not_yet_visible_object(Actor());
+    if (not_seen) {
+        float threshold = stalker->memory().visual().visibility_threshold();
+        if (threshold > 0.0f) {
+            return not_seen->m_value / threshold;
+        }
+    }
+
+    return 0.0f; 
+}
+
+bool CScriptGameObject::is_in_actor_sight() const {
+    CActor* pActor = Actor();
+    if (!pActor) return false;
+
+    // 1. Перевіряємо оклюзію (стіни, геометрію). 
+    // Використовуємо AI-пам'ять Актора: якщо між нами геометрія, поверне false.
+    if (!pActor->memory().visual().visible_now(&object())) {
+        return false;
+    }
+
+    // 2. Перевіряємо кут огляду (щоб монстр був саме на екрані гравця).
+    Fvector cam_pos = Device.vCameraPosition;
+    Fvector cam_dir = Device.vCameraDirection;
+
+    Fvector target_pos;
+    object().Center(target_pos); // Беремо центр монстра
+
+    // Знаходимо напрямок від камери до монстра
+    Fvector dir_to_target;
+    dir_to_target.sub(target_pos, cam_pos).normalize_safe();
+
+    // Вираховуємо косинус кута. 
+    // 0.707f — це приблизно 45 градусів від центру екрана (загальний FOV 90).
+    if (cam_dir.dotproduct(dir_to_target) < 0.707f) {
+        return false; 
+    }
+
+    return true; // Монстр на екрані і його не закриває стіна!
 }

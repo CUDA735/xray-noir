@@ -382,5 +382,7 @@ class_<CScriptGameObject> script_register_game_object2(class_<CScriptGameObject>
         .def("stop_particles", &CScriptGameObject::stop_particles)
 		
 		.def("actor_torch_enabled", &CScriptGameObject::actor_torch_enabled)
-		.def("get_luminocity", &CScriptGameObject::get_luminocity);
+		.def("get_luminocity", &CScriptGameObject::get_luminocity)
+		.def("get_suspicion_to_actor", &CScriptGameObject::get_suspicion_to_actor)
+		.def("is_in_actor_sight", &CScriptGameObject::is_in_actor_sight);
 }
