@@ -46,8 +46,15 @@ void CUITalkWnd::InitTalkWnd() {
     inherited::SetWndRect(Frect().set(0, 0, UI_BASE_WIDTH, UI_BASE_HEIGHT));
 
     m_bShowPortraits = false;
-    if (pSettings->section_exist("ui_extensions") && pSettings->line_exist("ui_extensions", "show_dialog_portraits")) {
-        m_bShowPortraits = pSettings->r_bool("ui_extensions", "show_dialog_portraits");
+
+    string_path ext_path;
+    if (FS.exist(ext_path, "$game_config$", "noirEngineExtention.ltx")) {
+        CInifile ext_ini(ext_path);
+        if (ext_ini.section_exist("ui")) {
+            if (ext_ini.line_exist("ui", "show_dialog_portraits")) {
+                m_bShowPortraits = ext_ini.r_bool("ui", "show_dialog_portraits");
+            }
+        }
     }
 
     if (m_bShowPortraits) {
@@ -83,7 +90,6 @@ void CUITalkWnd::InitTalkDialog() {
     m_pOurDialogManager = smart_cast<CPhraseDialogManager*>(m_pOurInvOwner);
     m_pOthersDialogManager = smart_cast<CPhraseDialogManager*>(m_pOthersInvOwner);
 
-    //имена собеседников
     UITalkDialogWnd->UICharacterInfoLeft.InitCharacter(m_pOurInvOwner->object_id());
     UITalkDialogWnd->UICharacterInfoRight.InitCharacter(m_pOthersInvOwner->object_id());
 

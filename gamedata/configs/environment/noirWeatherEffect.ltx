@@ -1,0 +1,28 @@
+[custom_lightning]
+; --- General parameters ---
+height_factor       = 0.85     ; Height scaling factor for lightning spawn position (relative to FAR_PLANE)
+size_multiplier     = 2.5     ; Global scale multiplier for the lightning mesh (higher values reduce visible stretching artifacts)
+
+; --- Probability settings (threshold-based, total does not need to equal 100) ---
+prob_near           = 5      ; Chance for a nearby strike
+prob_medium         = 25      ; Chance for a medium-distance strike
+; Remaining probability is automatically assigned to far-distance strikes
+
+; --- Distance ranges (in meters) ---
+dist_near_min       = 5.0
+dist_near_max       = 60.0
+
+dist_medium_min     = 60.0
+dist_medium_max     = 150.0
+
+dist_far_min        = 150.0
+dist_far_max        = 300.0
+
+[dynamic_wind]
+; Governs wind-driven raindrop behavior across all weather states
+max_angle             = 60.0 ; Maximum tilt angle applied to raindrops during peak storm conditions
+speed_wind_multiplier = 1.5 ; Multiplier controlling wind-induced acceleration of falling raindrops
+
+[rainmaterial]
+; Material-specific raindrop impact sound sets (material name = path to the corresponding impact sound)
+;metal = nature\rain_hit_metal

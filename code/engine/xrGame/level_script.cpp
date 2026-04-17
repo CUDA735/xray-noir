@@ -14,6 +14,8 @@
 #include "xrServer.h"
 #include "client_spawn_manager.h"
 #include "../xrEngine/igame_persistent.h"
+#include "../xrEngine/Environment.h"
+#include "../xrEngine/Thunderbolt.h"
 #include "game_cl_base.h"
 #include "UIGameCustom.h"
 #include "UI/UIDialogWnd.h"
@@ -252,15 +254,6 @@ LPCSTR get_name() { return Level().name().c_str(); }
 void prefetch_sound(LPCSTR name) { Level().PrefetchSound(name); }
 
 CClientSpawnManager& get_client_spawn_manager() { return (Level().client_spawn_manager()); }
-/*
-void start_stop_menu(CUIDialogWnd* pDialog, bool bDoHideIndicators)
-{
-        if(pDialog->IsShown())
-                pDialog->HideDialog();
-        else
-                pDialog->ShowDialog(bDoHideIndicators);
-}
-*/
 
 void add_dialog_to_render(CUIDialogWnd* pDialog) { CurrentGameUI()->AddDialogToRender(pDialog); }
 
@@ -314,20 +307,11 @@ void remove_call(const luabind::functor<bool>& condition, const luabind::functor
 }
 
 void add_call(const luabind::object& lua_object, LPCSTR condition, LPCSTR action) {
-    //	try{
-    //		CPHScriptObjectCondition
-    //*c=xr_new<CPHScriptObjectCondition>(lua_object,condition);
-    //		CPHScriptObjectAction		*a=xr_new<CPHScriptObjectAction>(lua_object,action);
     luabind::functor<bool> _condition = object_cast<luabind::functor<bool>>(lua_object[condition]);
     luabind::functor<void> _action = object_cast<luabind::functor<void>>(lua_object[action]);
     CPHScriptObjectConditionN* c = xr_new<CPHScriptObjectConditionN>(lua_object, _condition);
     CPHScriptObjectActionN* a = xr_new<CPHScriptObjectActionN>(lua_object, _action);
     Level().ph_commander_scripts().add_call_unique(c, c, a, a);
-    //	}
-    //	catch(...)
-    //	{
-    //		Msg("add_call excepted!!");
-    //	}
 }
 
 void remove_call(const luabind::object& lua_object, LPCSTR condition, LPCSTR action) {
@@ -375,6 +359,16 @@ void enable_input() {
     Msg("input enabled");
 #endif // #ifdef DEBUG
 }
+
+void spawn_lightning_at_pos(LPCSTR id, Fvector pos) {
+    if (g_pGamePersistent) {
+        CEffect_Thunderbolt* tb = g_pGamePersistent->Environment().eff_Thunderbolt;
+        if (tb) {
+            tb->ForceStrike(id, pos);
+        }
+    }
+}
+// ----------------------------------------
 
 void spawn_phantom(const Fvector& position) {
     Level().spawn_item("m_phantom", position, u32(-1), u16(-1), false);
@@ -645,6 +639,10 @@ void CLevel::script_register(lua_State* L) {
         def("remove_call", ((void (*)(const luabind::object&, LPCSTR, LPCSTR)) & remove_call)),
         def("remove_calls_for_object", remove_calls_for_object), def("present", is_level_present),
         def("disable_input", disable_input), def("enable_input", enable_input),
+        
+        def("spawn_lightning", &spawn_lightning_at_pos),
+        // --------------------------------------------------
+
         def("spawn_phantom", spawn_phantom),
 
         def("get_bounding_volume", get_bounding_volume),

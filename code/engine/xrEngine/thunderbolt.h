@@ -17,25 +17,20 @@ class ENGINE_API CLAItem;
 
 #ifdef INGAME_EDITOR
 #define INGAME_EDITOR_VIRTUAL virtual
-#else // #ifdef INGAME_EDITOR
+#else 
 #define INGAME_EDITOR_VIRTUAL
-#endif // #ifdef INGAME_EDITOR
+#endif 
 
 class CEnvironment;
 
 struct SThunderboltDesc {
-    // geom
-    // IRender_DetailModel*		l_model;
     FactoryPtr<IThunderboltDescRender> m_pRender;
-    // sound
     ref_sound snd;
-    // gradient
     struct SFlare {
         float fOpacity;
         Fvector2 fRadius;
         std::string texture;
         shared_str shader;
-        // ref_shader				hShader;
         FactoryPtr<IFlareRender> m_pFlare;
         SFlare() {
             fOpacity = 0;
@@ -87,12 +82,9 @@ private:
     Fvector3 current_direction;
 
     FactoryPtr<IThunderboltRender> m_pRender;
-    // ref_geom			  		hGeom_model;
-    // states
+    
     enum EState { stIdle, stWorking };
     EState state;
-
-    // ref_geom			  		hGeom_gradient;
 
     Fvector lightning_center;
     float lightning_size;
@@ -103,15 +95,17 @@ private:
     float next_lightning_time;
     BOOL bEnabled;
 
-    // params
-    //	Fvector2					p_var_alt;
-    //	float						p_var_long;
-    //	float						p_min_dist;
-    //	float						p_tilt;
-    //	float						p_second_prop;
-    //	float						p_sky_color;
-    //	float						p_sun_color;
-    //	float						p_fog_color;
+    // === ПАРАМЕТРИ NOIR ENGINE ===
+    bool m_bEnableCustomLightning;
+    float m_fHeightFactor;
+    float m_fSizeMultiplier;
+    int m_iProbNear;
+    int m_iProbMedium;
+    float m_fDistNearMin, m_fDistNearMax;
+    float m_fDistMediumMin, m_fDistMediumMax;
+    float m_fDistFarMin, m_fDistFarMax;
+    // =============================
+
 private:
     static BOOL RayPick(const Fvector& s, const Fvector& d, float& range);
     void Bolt(const std::string& id, const float period, const float life_time);
@@ -123,8 +117,8 @@ public:
     void OnFrame(const std::string& id, const float period, const float duration);
     void Render();
 
-    std::string AppendDef(CEnvironment& environment, CInifile* pIni, CInifile* thunderbolts,
-                         LPCSTR sect);
+    std::string AppendDef(CEnvironment& environment, CInifile* pIni, CInifile* thunderbolts, LPCSTR sect);
+    void ForceStrike(LPCSTR id, const Fvector& target_pos);
 };
 
 #endif // ThunderboltH

@@ -7,6 +7,7 @@
 #pragma once
 
 #include "../xrcdb/xr_collide_defs.h"
+#include "GameMtlLib.h" // Бібліотека матеріалів
 
 // refs
 class ENGINE_API IRender_DetailModel;
@@ -26,6 +27,7 @@ private:
         u32 dwTime_Life;
         u32 dwTime_Hit;
         u32 uv_set;
+        u16 material_idx;
         void invalidate() { dwTime_Life = 0; }
     };
     struct Particle {
@@ -36,32 +38,36 @@ private:
     };
     enum States { stIdle = 0, stWorking };
 
+    // === NOIR ENGINE DYNAMIC RAIN SYSTEM ===
+	// Material-based raindrop impact sound descriptor
+    struct RainHitSound {
+        shared_str keyword; 
+        ref_sound snd;      
+		u32 last_play_time;
+    };
+    xr_vector<RainHitSound> m_HitSounds; 
+    
+    // Module feature flags
+    bool m_bEnableMaterialSounds;        
+    bool m_bEnableDynamicWind;
+
+    // Wind simulation parameters
+    float m_fWindMaxAngle;
+    float m_fWindSpeedMultiplier;
+    // ==============================================
+
 private:
-    // Visualization	(rain) and (drops)
     FactoryPtr<IRainRender> m_pRender;
-    /*
-    // Visualization	(rain)
-    ref_shader						SH_Rain;
-    ref_geom						hGeom_Rain;
 
-    // Visualization	(drops)
-    IRender_DetailModel*			DM_Drop;
-    ref_geom						hGeom_Drops;
-    */
-
-    // Data and logic
     xr_vector<Item> items;
     States state;
 
-    // Particles
     xr_vector<Particle> particle_pool;
     Particle* particle_active;
     Particle* particle_idle;
 
-    // Sounds
     ref_sound snd_Ambient;
 
-    // Utilities
     void p_create();
     void p_destroy();
 
@@ -71,11 +77,10 @@ private:
     Particle* p_allocate();
     void p_free(Particle* P);
 
-    // Some methods
     void Born(Item& dest, float radius);
-    void Hit(Fvector& pos);
-    BOOL RayPick(const Fvector& s, const Fvector& d, float& range, collide::rq_target tgt);
-    void RenewItem(Item& dest, float height, BOOL bHit);
+    void Hit(Fvector& pos, u16 material_idx); 
+    BOOL RayPick(const Fvector& s, const Fvector& d, float& range, collide::rq_target tgt, u16& material_idx); 
+    void RenewItem(Item& dest, float height, BOOL bHit, u16 material_idx); 
 
 public:
     CEffect_Rain();

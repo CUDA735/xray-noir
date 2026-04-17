@@ -20,11 +20,8 @@ SThunderboltDesc::SThunderboltDesc() : m_GradientTop(0), m_GradientCenter(0) {}
 
 SThunderboltDesc::~SThunderboltDesc() {
     m_pRender->DestroyModel();
-    //::Render->model_Delete	(l_model);
     m_GradientTop->m_pFlare->DestroyShader();
     m_GradientCenter->m_pFlare->DestroyShader();
-    // m_GradientTop.hShader.destroy	();
-    // m_GradientCenter.hShader.destroy();
     snd.destroy();
 
     xr_delete(m_GradientTop);
@@ -62,13 +59,6 @@ void SThunderboltDesc::load(CInifile& pIni, shared_str const& sect) {
     LPCSTR m_name;
     m_name = pIni.r_string(sect, "lightning_model");
     m_pRender->CreateModel(m_name);
-
-    /*
-IReader* F			= 0;
-    F					= FS.r_open("$game_meshes$",m_name); R_ASSERT2(F,"Empty
-'lightning_model'."); l_model				= ::Render->model_CreateDM(F); FS.r_close
-(F);
-    */
 
     // sound
     m_name = pIni.r_string(sect, "sound");
@@ -108,34 +98,55 @@ CEffect_Thunderbolt::CEffect_Thunderbolt() {
     next_lightning_time = 0.f;
     bEnabled = FALSE;
 
-    // geom
-    // hGeom_model.create	(D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_TEX1, RCache.Vertex.Buffer(),
-    // RCache.Index.Buffer());
-    // hGeom_gradient.create(FVF::F_LIT,RCache.Vertex.Buffer(),RCache.QuadIB);
+    m_bEnableCustomLightning = false; // Ваніль за замовчуванням
+    
+    m_fHeightFactor = 0.8f;
+    m_fSizeMultiplier = 2.5f;
+    m_iProbNear = 20; 
+    m_iProbMedium = 40;
+    m_fDistNearMin = 0.f; 
+    m_fDistNearMax = 5.f;
+    m_fDistMediumMin = 10.f; 
+    m_fDistMediumMax = 40.f;
+    m_fDistFarMin = 40.f; 
+    m_fDistFarMax = 150.f;
 
-    // params
-    //	p_var_alt		= pSettings->r_fvector2							( "environment","altitude"
-    //); 	p_var_alt.x		= deg2rad(p_var_alt.x); p_var_alt.y	=
-    //deg2rad(p_var_alt.y);
-    //	p_var_long		= deg2rad	(				 pSettings->r_float	( "environment","delta_longitude"
-    //)); 	p_min_dist		= _min		(.95f,pSettings->r_float	(
-    //"environment","min_dist_factor" )); 	p_tilt			= deg2rad
-    //(pSettings->r_float					( "environment","tilt" ));
-    //	p_second_prop	= pSettings->r_float							( "environment","second_propability"
-    //); 	clamp			(p_second_prop,0.f,1.f); 	p_sky_color		=
-    //pSettings->r_float							( "environment","sky_color"
-    //); 	p_sun_color		= pSettings->r_float
-    //( "environment","sun_color" );
-    //	p_fog_color		= pSettings->r_float							( "environment","fog_color"
-    //);
+    string_path ext_path;
+    if (FS.exist(ext_path, "$game_config$", "noirEngineExtention.ltx")) {
+        CInifile ext_ini(ext_path);
+        if (ext_ini.section_exist("environment") && ext_ini.line_exist("environment", "enable_custom_lightning")) {
+            m_bEnableCustomLightning = ext_ini.r_bool("environment", "enable_custom_lightning");
+        }
+    }
+
+    if (m_bEnableCustomLightning) {
+        string_path wex_path;
+        if (FS.exist(wex_path, "$game_config$", "environment\\noirWeatherEffect.ltx")) {
+            CInifile wex_ini(wex_path);
+            if (wex_ini.section_exist("custom_lightning")) {
+                m_fHeightFactor = wex_ini.r_float("custom_lightning", "height_factor");
+                m_fSizeMultiplier = wex_ini.r_float("custom_lightning", "size_multiplier");
+                m_iProbNear = wex_ini.r_s32("custom_lightning", "prob_near");
+                m_iProbMedium = wex_ini.r_s32("custom_lightning", "prob_medium");
+                m_fDistNearMin = wex_ini.r_float("custom_lightning", "dist_near_min");
+                m_fDistNearMax = wex_ini.r_float("custom_lightning", "dist_near_max");
+                m_fDistMediumMin = wex_ini.r_float("custom_lightning", "dist_medium_min");
+                m_fDistMediumMax = wex_ini.r_float("custom_lightning", "dist_medium_max");
+                m_fDistFarMin = wex_ini.r_float("custom_lightning", "dist_far_min");
+                m_fDistFarMax = wex_ini.r_float("custom_lightning", "dist_far_max");
+            } else {
+                m_bEnableCustomLightning = false;
+            }
+        } else {
+            m_bEnableCustomLightning = false;
+        }
+    }
 }
 
 CEffect_Thunderbolt::~CEffect_Thunderbolt() {
     for (auto d_it = collection.begin(); d_it != collection.end(); d_it++)
         xr_delete(*d_it);
     collection.clear();
-    // hGeom_model.destroy			();
-    // hGeom_gradient.destroy		();
 }
 
 std::string CEffect_Thunderbolt::AppendDef(CEnvironment& environment, CInifile* pIni,
@@ -183,9 +194,7 @@ void CEffect_Thunderbolt::Bolt(const std::string& id, const float period, const 
     life_time = lt + Random.randF(-lt * 0.5f, lt * 0.5f);
     current_time = 0.f;
 
-    current =
-        // TODO: [imdex] remove shared_str (ini)
-        g_pGamePersistent->Environment().thunderbolt_collection(collection, id.c_str())->GetRandomDesc();
+    current = g_pGamePersistent->Environment().thunderbolt_collection(collection, id.c_str())->GetRandomDesc();
     VERIFY(current);
 
     Fmatrix XF, S;
@@ -193,41 +202,94 @@ void CEffect_Thunderbolt::Bolt(const std::string& id, const float period, const 
     float sun_h, sun_p;
     CEnvironment& environment = g_pGamePersistent->Environment();
     environment.CurrentEnv->sun_dir.getHP(sun_h, sun_p);
-    float alt =
-        environment.p_var_alt; // Random.randF(environment.p_var_alt.x,environment.p_var_alt.y);
-    float lng =
-        Random.randF(sun_h - environment.p_var_long + PI, sun_h + environment.p_var_long + PI);
-    float dist = Random.randF(FAR_DIST * environment.p_min_dist, FAR_DIST * .95f);
-    current_direction.setHP(lng, alt);
-    pos.mad(Device.vCameraPosition, current_direction, dist);
-    dev.x = Random.randF(-environment.p_tilt, environment.p_tilt);
-    dev.y = Random.randF(0, PI_MUL_2);
-    dev.z = Random.randF(-environment.p_tilt, environment.p_tilt);
-    XF.setXYZi(dev);
 
-    Fvector light_dir = { 0.f, -1.f, 0.f };
-    XF.transform_dir(light_dir);
-    lightning_size = FAR_DIST * 2.f;
-    RayPick(pos, light_dir, lightning_size);
+    if (m_bEnableCustomLightning) {
+        // ========================================================
+        // NOIR ENGINE CUSTOM LIGHTNING
+        // ========================================================
+        float height = FAR_DIST * m_fHeightFactor; 
+        float R = 0.f;
+        int strike_type = Random.randI(0, 100);
 
-    lightning_center.mad(pos, light_dir, lightning_size * 0.5f);
+        if (strike_type < m_iProbNear) {
+            R = Random.randF(m_fDistNearMin, m_fDistNearMax);
+        } else if (strike_type < (m_iProbNear + m_iProbMedium)) {
+            R = Random.randF(m_fDistMediumMin, m_fDistMediumMax);
+        } else {
+            R = Random.randF(m_fDistFarMin, m_fDistFarMax);
+        }
 
-    S.scale(lightning_size, lightning_size, lightning_size);
-    XF.translate_over(pos);
-    current_xform.mul_43(XF, S);
+        float alt = atan2(height, R); 
+        float dist = sqrt(height * height + R * R);
+        float lng = Random.randF(0.f, PI_MUL_2); 
 
-    float next_v = Random.randF();
+        current_direction.setHP(lng, alt);
+        pos.mad(Device.vCameraPosition, current_direction, dist);
+        dev.x = Random.randF(-environment.p_tilt, environment.p_tilt);
+        dev.y = Random.randF(0, PI_MUL_2);
+        dev.z = Random.randF(-environment.p_tilt, environment.p_tilt);
+        XF.setXYZi(dev);
 
-    if (next_v < environment.p_second_prop) {
-        next_lightning_time = Device.fTimeGlobal + lt + EPS_L;
+        Fvector light_dir = { 0.f, -1.f, 0.f };
+        XF.transform_dir(light_dir);
+        
+        lightning_size = dist * m_fSizeMultiplier; 
+        if (lightning_size < 50.f) lightning_size = 50.f; 
+
+        RayPick(pos, light_dir, lightning_size);
+
+        lightning_center.mad(pos, light_dir, lightning_size * 0.5f);
+
+        S.scale(lightning_size, lightning_size, lightning_size);
+        XF.translate_over(pos);
+        current_xform.mul_43(XF, S);
+
+        float next_v = Random.randF();
+
+        if (next_v < environment.p_second_prop) {
+            next_lightning_time = Device.fTimeGlobal + lt + EPS_L;
+        } else {
+            next_lightning_time = Device.fTimeGlobal + period + Random.randF(-period * 0.3f, period * 0.3f);
+            current->snd.play_no_feedback(0, 0, dist / 300.f, &pos, 0, 0, &Fvector2().set(dist / 2, dist * 2.f));
+        }
+
+        current_direction.invert(); 
     } else {
-        next_lightning_time =
-            Device.fTimeGlobal + period + Random.randF(-period * 0.3f, period * 0.3f);
-        current->snd.play_no_feedback(0, 0, dist / 300.f, &pos, 0, 0,
-                                      &Fvector2().set(dist / 2, dist * 2.f));
-    }
+        // ========================================================
+        // VANILLA
+        // ========================================================
+        float alt = environment.p_var_alt; 
+        float lng = Random.randF(sun_h - environment.p_var_long + PI, sun_h + environment.p_var_long + PI);
+        float dist = Random.randF(FAR_DIST * environment.p_min_dist, FAR_DIST * .95f);
+        current_direction.setHP(lng, alt);
+        pos.mad(Device.vCameraPosition, current_direction, dist);
+        dev.x = Random.randF(-environment.p_tilt, environment.p_tilt);
+        dev.y = Random.randF(0, PI_MUL_2);
+        dev.z = Random.randF(-environment.p_tilt, environment.p_tilt);
+        XF.setXYZi(dev);
 
-    current_direction.invert(); // for env-sun
+        Fvector light_dir = { 0.f, -1.f, 0.f };
+        XF.transform_dir(light_dir);
+        lightning_size = FAR_DIST * 2.f;
+        RayPick(pos, light_dir, lightning_size);
+
+        lightning_center.mad(pos, light_dir, lightning_size * 0.5f);
+
+        S.scale(lightning_size, lightning_size, lightning_size);
+        XF.translate_over(pos);
+        current_xform.mul_43(XF, S);
+
+        float next_v = Random.randF();
+
+        if (next_v < environment.p_second_prop) {
+            next_lightning_time = Device.fTimeGlobal + lt + EPS_L;
+        } else {
+            next_lightning_time = Device.fTimeGlobal + period + Random.randF(-period * 0.3f, period * 0.3f);
+            current->snd.play_no_feedback(0, 0, dist / 300.f, &pos, 0, 0, &Fvector2().set(dist / 2, dist * 2.f));
+        }
+
+        current_direction.invert(); 
+    }
 }
 
 void CEffect_Thunderbolt::OnFrame(const std::string& id, const float period, const float duration) {
@@ -277,74 +339,38 @@ void CEffect_Thunderbolt::OnFrame(const std::string& id, const float period, con
 void CEffect_Thunderbolt::Render() {
     if (state == stWorking) {
         m_pRender->Render(*this);
-
-        /*
-VERIFY	(current);
-
-// lightning model
-float dv			= lightning_phase*0.5f;
-dv					= (lightning_phase>0.5f)?Random.randI(2)*0.5f:dv;
-
-        RCache.set_CullMode	(CULL_NONE);
-u32					v_offset,i_offset;
-u32					vCount_Lock		= current->l_model->number_vertices;
-u32					iCount_Lock		= current->l_model->number_indices;
-IRender_DetailModel::fvfVertexOut* v_ptr= (IRender_DetailModel::fvfVertexOut*)
-RCache.Vertex.Lock	(vCount_Lock, hGeom_model->vb_stride, v_offset); u16*
-i_ptr				=
-RCache.Index.Lock	(iCount_Lock, i_offset);
-// XForm verts
-current->l_model->transfer(current_xform,v_ptr,0xffffffff,i_ptr,0,0.f,dv);
-// Flush if needed
-RCache.Vertex.Unlock(vCount_Lock,hGeom_model->vb_stride);
-RCache.Index.Unlock	(iCount_Lock);
-RCache.set_xform_world(Fidentity);
-RCache.set_Shader	(current->l_model->shader);
-RCache.set_Geometry	(hGeom_model);
-RCache.Render		(D3DPT_TRIANGLELIST,v_offset,0,vCount_Lock,i_offset,iCount_Lock/3);
-        RCache.set_CullMode	(CULL_CCW);
-
-// gradient
-Fvector				vecSx, vecSy;
-u32					VS_Offset;
-FVF::LIT *pv		= (FVF::LIT*) RCache.Vertex.Lock(8,hGeom_gradient.stride(),VS_Offset);
-// top
-{
-    u32 c_val		= iFloor(current->m_GradientTop.fOpacity*lightning_phase*255.f);
-    u32 c			= color_rgba(c_val,c_val,c_val,c_val);
-    vecSx.mul		(Device.vCameraRight, 	current->m_GradientTop.fRadius.x*lightning_size);
-    vecSy.mul		(Device.vCameraTop, 	-current->m_GradientTop.fRadius.y*lightning_size);
-    pv->set			(current_xform.c.x+vecSx.x-vecSy.x, current_xform.c.y+vecSx.y-vecSy.y,
-current_xform.c.z+vecSx.z-vecSy.z, c, 0, 0); pv++; pv->set
-(current_xform.c.x+vecSx.x+vecSy.x, current_xform.c.y+vecSx.y+vecSy.y,
-current_xform.c.z+vecSx.z+vecSy.z, c, 0, 1); pv++; pv->set
-(current_xform.c.x-vecSx.x-vecSy.x, current_xform.c.y-vecSx.y-vecSy.y,
-current_xform.c.z-vecSx.z-vecSy.z, c, 1, 0); pv++; pv->set
-(current_xform.c.x-vecSx.x+vecSy.x, current_xform.c.y-vecSx.y+vecSy.y,
-current_xform.c.z-vecSx.z+vecSy.z, c, 1, 1); pv++;
+	}
 }
-// center
-{
-    u32 c_val		= iFloor(current->m_GradientTop.fOpacity*lightning_phase*255.f);
-    u32 c			= color_rgba(c_val,c_val,c_val,c_val);
-    vecSx.mul		(Device.vCameraRight, 	current->m_GradientCenter.fRadius.x*lightning_size);
-    vecSy.mul		(Device.vCameraTop, -current->m_GradientCenter.fRadius.y*lightning_size);
-    pv->set			(lightning_center.x+vecSx.x-vecSy.x, lightning_center.y+vecSx.y-vecSy.y,
-lightning_center.z+vecSx.z-vecSy.z, c, 0, 0); pv++; pv->set
-(lightning_center.x+vecSx.x+vecSy.x, lightning_center.y+vecSx.y+vecSy.y,
-lightning_center.z+vecSx.z+vecSy.z, c, 0, 1); pv++; pv->set
-(lightning_center.x-vecSx.x-vecSy.x, lightning_center.y-vecSx.y-vecSy.y,
-lightning_center.z-vecSx.z-vecSy.z, c, 1, 0); pv++; pv->set
-(lightning_center.x-vecSx.x+vecSy.x, lightning_center.y-vecSx.y+vecSy.y,
-lightning_center.z-vecSx.z+vecSy.z, c, 1, 1); pv++;
-}
-RCache.Vertex.Unlock	(8,hGeom_gradient.stride());
-RCache.set_xform_world	(Fidentity);
-RCache.set_Geometry		(hGeom_gradient);
-RCache.set_Shader		(current->m_GradientTop.hShader);
-RCache.Render			(D3DPT_TRIANGLELIST,VS_Offset, 0,4,0,2);
-RCache.set_Shader		(current->m_GradientCenter.hShader);
-RCache.Render			(D3DPT_TRIANGLELIST,VS_Offset+4, 0,4,0,2);
-        */
-    }
+
+// --- SCRIPT‑DRIVEN LIGHTNING STRIKE ---
+void CEffect_Thunderbolt::ForceStrike(LPCSTR id, const Fvector& target_pos) {
+    if (!m_bEnableCustomLightning || !id || !id[0]) return;
+    
+    state = stWorking;
+    life_time = 2.0f + Random.randF(-0.5f, 0.5f); 
+    current_time = 0.f;
+
+    current = g_pGamePersistent->Environment().thunderbolt_collection(collection, id)->GetRandomDesc();
+    if (!current) return;
+
+    Fmatrix XF, S;
+    float height = FAR_DIST * m_fHeightFactor;
+    Fvector pos = target_pos;
+    pos.y += height; 
+
+    Fvector light_dir = { 0.f, -1.f, 0.f };
+    lightning_size = height + 10.f; 
+    RayPick(pos, light_dir, lightning_size);
+
+    lightning_center.mad(pos, light_dir, lightning_size * 0.5f);
+
+    S.scale(lightning_size, lightning_size, lightning_size);
+    XF.setXYZi(Random.randF(-0.05f, 0.05f), Random.randF(0, PI_MUL_2), Random.randF(-0.05f, 0.05f));
+    XF.translate_over(pos);
+    current_xform.mul_43(XF, S);
+
+    Fvector snd_pos = target_pos; 
+    current->snd.play_no_feedback(0, 0, Device.vCameraPosition.distance_to(target_pos) / 300.f, &snd_pos, 0, 0, &Fvector2().set(10.f, 200.f));
+
+    current_direction.sub(target_pos, Device.vCameraPosition).normalize_safe();
 }
