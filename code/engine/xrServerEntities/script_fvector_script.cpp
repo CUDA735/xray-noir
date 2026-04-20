@@ -73,7 +73,7 @@ void CScriptFvector::script_register(lua_State* L) {
                .def("clamp", (Fvector & (Fvector::*)(const Fvector&))(&Fvector::clamp),
                     return_reference_to<1>())
                .def("clamp",
-                    (Fvector & (Fvector::*)(const Fvector&, const Fvector))(&Fvector::clamp),
+                    (Fvector & (Fvector::*)(const Fvector&, const Fvector&))(&Fvector::clamp),
                     return_reference_to<1>())
                .def("inertion", &Fvector::inertion, return_reference_to<1>())
                .def("average", (Fvector & (Fvector::*)(const Fvector&))(&Fvector::average),

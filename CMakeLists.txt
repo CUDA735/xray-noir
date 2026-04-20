@@ -17,7 +17,7 @@ option(PNG_SCREENSHOTS "enable png format for the screenshots" OFF)
 configure_file(code/engine/xr_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/generated/xr_config.h @ONLY)
 
 if (MSVC)
-    if(MSVC_VERSION GREATER_EQUAL 1912) # MSVS 2017.5 and higher (including VS 2026)
+    if(MSVC_VERSION GREATER_EQUAL 1912)
         execute_process(COMMAND "vswhere" "-latest" "-property" "installationPath"
                         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/extras
                         OUTPUT_VARIABLE VS_TOOLS_PATH
@@ -32,12 +32,61 @@ else()
     message(FATAL_ERROR "Only MSVC compiler is supported")
 endif()
 
-set(CMAKE_CONFIGURATION_TYPES "Debug;RelWithDebInfo" CACHE STRING "" FORCE)
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+# -----------------------------------------
+# Custom Release configurations with AVX
+# -----------------------------------------
+set(CMAKE_CONFIGURATION_TYPES "Debug;RelWithDebInfo;Release;ReleaseAVX;ReleaseAVX2" CACHE STRING "" FORCE)
 
+# Base flags
+set(CMAKE_CXX_FLAGS_RELEASE "/O2 /DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASEAVX "/O2 /DNDEBUG /arch:AVX")
+set(CMAKE_CXX_FLAGS_RELEASEAVX2 "/O2 /DNDEBUG /arch:AVX2")
+
+# Linker flags
+set(CMAKE_EXE_LINKER_FLAGS_RELEASE "/LTCG /OPT:REF /INCREMENTAL:NO")
+set(CMAKE_EXE_LINKER_FLAGS_RELEASEAVX "/LTCG /OPT:REF /INCREMENTAL:NO")
+set(CMAKE_EXE_LINKER_FLAGS_RELEASEAVX2 "/LTCG /OPT:REF /INCREMENTAL:NO")
+
+# Apply flags dynamically
+string(TOUPPER "${CMAKE_BUILD_TYPE}" UPPER_BUILD_TYPE)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${UPPER_BUILD_TYPE}}")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_EXE_LINKER_FLAGS_${UPPER_BUILD_TYPE}}")
+
+# -----------------------------------------
+# Compile definitions for AVX builds
+# -----------------------------------------
+add_compile_definitions(
+    $<$<CONFIG:ReleaseAVX>:XR_AVX>
+    $<$<CONFIG:ReleaseAVX2>:XR_AVX2>
+)
+
+# -----------------------------------------
+# Output directories per configuration
+# -----------------------------------------
+if (ARCH_X86)
+    set(ARCH_SUFFIX x86)
+else()
+    set(ARCH_SUFFIX x64)
+endif()
+
+set(BIN_OUT_PATH "${CMAKE_SOURCE_DIR}/bin/${ARCH_SUFFIX}")
+set(PDB_OUT_PATH "${CMAKE_SOURCE_DIR}/pdb/${ARCH_SUFFIX}")
+
+foreach(cfg Debug Release ReleaseAVX ReleaseAVX2 RelWithDebInfo)
+    string(TOUPPER ${cfg} CFGU)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${CFGU} "${BIN_OUT_PATH}/${cfg}")
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${CFGU} "${BIN_OUT_PATH}/${cfg}")
+    set(CMAKE_PDB_OUTPUT_DIRECTORY_${CFGU} "${PDB_OUT_PATH}/${cfg}")
+endforeach()
+
+# -----------------------------------------
+# Remove old EH flags
+# -----------------------------------------
 string(REGEX REPLACE "/EH[a-z]+" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+
 add_compile_options(/MP "$<$<CONFIG:RELWITHDEBINFO>:/Ob2>" "$<$<CONFIG:DEBUG>:/EHsc>"
                     "$<$<CONFIG:RELWITHDEBINFO>:/Ot>" "$<$<CONFIG:RELWITHDEBINFO>:/wd4577>")
+
 if (NOT REL_DEVELOP)
     add_compile_options("$<$<CONFIG:RELWITHDEBINFO>:/GL>")
 endif()
@@ -59,6 +108,7 @@ if (REL_DEVELOP)
 else()
     set(SHARED_RELEASE_LINKER_FLAGS "/LTCG /OPT:REF /INCREMENTAL:NO")
 endif()
+
 set(STATIC_RELEASE_LINKER_FLAGS "/LTCG")
 set(CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO} ${SHARED_RELEASE_LINKER_FLAGS}")
 set(CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} ${SHARED_RELEASE_LINKER_FLAGS}")
@@ -66,33 +116,19 @@ set(CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_STATIC_LINKER_FLAGS_RELWIT
 unset(SHARED_RELEASE_LINKER_FLAGS)
 unset(STATIC_RELEASE_LINKER_FLAGS)
 
-if (ARCH_X86)
-    set(ARCH_SUFFIX x86)
-else()
-    set(ARCH_SUFFIX x64)
-endif()
-
-set(BIN_OUT_PATH "${CMAKE_SOURCE_DIR}/bin/${ARCH_SUFFIX}")
-set(PDB_OUT_PATH "${CMAKE_SOURCE_DIR}/pdb/${ARCH_SUFFIX}")
-
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${BIN_OUT_PATH}")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${BIN_OUT_PATH}")
-set(CMAKE_PDB_OUTPUT_DIRECTORY "${PDB_OUT_PATH}")
-
-foreach(OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES})
-    string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} "${BIN_OUT_PATH}")
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} "${BIN_OUT_PATH}")
-    set(CMAKE_PDB_OUTPUT_DIRECTORY_${OUTPUTCONFIG} "${PDB_OUT_PATH}")
-endforeach()
-
+# -----------------------------------------
+# Include directories
+# -----------------------------------------
 include_directories(code/3rd-party code/engine code/utils ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
-# 3d-party
+# -----------------------------------------
+# 3rd-party
+# -----------------------------------------
 if (BUILD_TESTS)
     set(gtest_force_shared_crt ON)
     add_subdirectory(code/3rd-party/gtest)
 endif()
+
 add_subdirectory(code/3rd-party/dxsdk)
 add_subdirectory(code/3rd-party/zlib)
 add_subdirectory(code/3rd-party/minizip)
@@ -120,6 +156,7 @@ if (BUILD_TESTS)
     set_target_properties(gtest PROPERTIES FOLDER "3rd-party/gtest")
     set_target_properties(gtest_main PROPERTIES FOLDER "3rd-party/gtest")
 endif()
+
 set_target_properties(zlib PROPERTIES FOLDER 3rd-party)
 set_target_properties(minizip PROPERTIES FOLDER 3rd-party)
 set_target_properties(dxerr2015 PROPERTIES FOLDER 3rd-party)
@@ -137,7 +174,9 @@ set_target_properties(DPlay-src PROPERTIES FOLDER 3rd-party)
 set_target_properties(eax-src PROPERTIES FOLDER 3rd-party)
 set_target_properties(cs-src PROPERTIES FOLDER 3rd-party)
 
-#engine
+# -----------------------------------------
+# Engine modules
+# -----------------------------------------
 add_subdirectory(code/engine/xrCore)
 add_subdirectory(code/engine/xrAPI)
 add_subdirectory(code/engine/xrCDB)
@@ -174,6 +213,9 @@ if (MSVC)
     set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT xrEngine)
 endif()
 
+# -----------------------------------------
+# Utils
+# -----------------------------------------
 if (${BUILD_UTILS})
     add_subdirectory(code/3rd-party/freeimage/libjpeg)
     add_subdirectory(code/3rd-party/freeimage/libjxr)

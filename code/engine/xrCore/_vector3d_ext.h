@@ -1,119 +1,115 @@
 #pragma once
 
 #include "_vector3d.h"
+#include <algorithm>
 
-inline Fvector cr_fvector3(float f) {
-    Fvector res = { f, f, f };
-    return res;
+[[nodiscard]] constexpr inline Fvector cr_fvector3(float f) noexcept {
+    return { f, f, f };
 }
 
-inline Fvector cr_fvector3(float x, float y, float z) {
-    Fvector res = { x, y, z };
-    return res;
+[[nodiscard]] constexpr inline Fvector cr_fvector3(float x, float y, float z) noexcept {
+    return { x, y, z };
 }
 
-inline Fvector cr_fvector3_hp(float h, float p) {
+[[nodiscard]] inline Fvector cr_fvector3_hp(float h, float p) noexcept {
     Fvector res;
     res.setHP(h, p);
     return res;
 }
 
-inline Fvector operator+(const Fvector& v1, const Fvector& v2) {
-    return cr_fvector3(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z);
+[[nodiscard]] constexpr inline Fvector operator+(const Fvector& v1, const Fvector& v2) noexcept {
+    return { v1.x + v2.x, v1.y + v2.y, v1.z + v2.z };
 }
 
-inline Fvector operator-(const Fvector& v1, const Fvector& v2) {
-    return cr_fvector3(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z);
+[[nodiscard]] constexpr inline Fvector operator-(const Fvector& v1, const Fvector& v2) noexcept {
+    return { v1.x - v2.x, v1.y - v2.y, v1.z - v2.z };
 }
 
-inline Fvector operator-(const Fvector& v) { return cr_fvector3(-v.x, -v.y, -v.z); }
-
-inline Fvector operator*(const Fvector& v, float f) {
-    return cr_fvector3(v.x * f, v.y * f, v.z * f);
+[[nodiscard]] constexpr inline Fvector operator-(const Fvector& v) noexcept { 
+    return { -v.x, -v.y, -v.z }; 
 }
 
-inline Fvector operator*(float f, const Fvector& v) {
-    return cr_fvector3(v.x * f, v.y * f, v.z * f);
+[[nodiscard]] constexpr inline Fvector operator*(const Fvector& v, float f) noexcept {
+    return { v.x * f, v.y * f, v.z * f };
 }
 
-inline Fvector operator/(const Fvector& v, float f) {
+[[nodiscard]] constexpr inline Fvector operator*(float f, const Fvector& v) noexcept {
+    return { v.x * f, v.y * f, v.z * f };
+}
+
+[[nodiscard]] constexpr inline Fvector operator/(const Fvector& v, float f) noexcept {
     const float repr_f = 1.f / f;
-    return cr_fvector3(v.x * repr_f, v.y * repr_f, v.z * repr_f);
+    return { v.x * repr_f, v.y * repr_f, v.z * repr_f };
 }
 
 namespace xr {
 
-inline Fvector min(const Fvector& v1, const Fvector& v2) {
-    Fvector r;
-    r.min(v1, v2);
-    return r;
+[[nodiscard]] constexpr inline Fvector min(const Fvector& v1, const Fvector& v2) noexcept {
+    return { std::min(v1.x, v2.x), std::min(v1.y, v2.y), std::min(v1.z, v2.z) };
 }
 
-inline Fvector max(const Fvector& v1, const Fvector& v2) {
-    Fvector r;
-    r.max(v1, v2);
-    return r;
+[[nodiscard]] constexpr inline Fvector max(const Fvector& v1, const Fvector& v2) noexcept {
+    return { std::max(v1.x, v2.x), std::max(v1.y, v2.y), std::max(v1.z, v2.z) };
 }
 
-inline Fvector abs(const Fvector& v) {
-    Fvector r;
-    r.abs(v);
-    return r;
+// C++17 FIX: Прибрано constexpr через використання std::abs
+[[nodiscard]] inline Fvector abs(const Fvector& v) noexcept {
+    return { std::abs(v.x), std::abs(v.y), std::abs(v.z) };
 }
 
 } // xr namespace
 
-inline Fvector normalize(const Fvector& v) {
+[[nodiscard]] inline Fvector normalize(const Fvector& v) noexcept {
     Fvector r(v);
     r.normalize();
     return r;
 }
 
-inline float magnitude(const Fvector& v) { return v.magnitude(); }
-
-inline float sqaure_magnitude(const Fvector& v) { return v.square_magnitude(); }
-
-inline float dotproduct(const Fvector& v1, const Fvector& v2) {
-    return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+[[nodiscard]] inline float magnitude(const Fvector& v) noexcept { 
+    return v.magnitude(); 
 }
 
-// CrossProduct
-inline Fvector crossproduct(const Fvector& v1, const Fvector& v2) {
-    Fvector r;
-    r.crossproduct(v1, v2);
-    return r;
+[[nodiscard]] constexpr inline float sqaure_magnitude(const Fvector& v) noexcept { 
+    return v.square_magnitude(); 
 }
 
-inline Fvector cr_vectorHP(float h, float p) {
+[[nodiscard]] inline float dotproduct(const Fvector& v1, const Fvector& v2) noexcept {
+    return v1.dotproduct(v2);
+}
+
+[[nodiscard]] constexpr inline Fvector crossproduct(const Fvector& v1, const Fvector& v2) noexcept {
+    return {
+        v1.y * v2.z - v1.z * v2.y,
+        v1.z * v2.x - v1.x * v2.z,
+        v1.x * v2.y - v1.y * v2.x
+    };
+}
+
+[[nodiscard]] inline Fvector cr_vectorHP(float h, float p) noexcept {
     const float ch = std::cos(h), cp = std::cos(p), sh = std::sin(h), sp = std::sin(p);
-    Fvector r;
-    r.x = -cp * sh;
-    r.y = sp;
-    r.z = cp * ch;
-    return r;
+    return { -cp * sh, sp, cp * ch };
 }
 
-inline float angle_between_vectors(Fvector const v1, Fvector const v2) {
-    float const mag1 = v1.magnitude();
-    float const mag2 = v2.magnitude();
-    float const epsilon = 1e-6;
+[[nodiscard]] inline float angle_between_vectors(const Fvector& v1, const Fvector& v2) noexcept {
+    const float mag1 = v1.magnitude();
+    const float mag2 = v2.magnitude();
+    const float epsilon = 1e-6f;
+    
     if (mag1 < epsilon || mag2 < epsilon) {
         return 0.f;
     }
 
-    float angle_cos = dotproduct(v1, v2) / (mag1 * mag2);
-    if (angle_cos < -1.f) {
-        angle_cos = -1.f;
-    } else if (angle_cos > +1.f) {
-        angle_cos = +1.f;
-    }
-    return acosf(angle_cos);
+    float angle_cos = v1.dotproduct(v2) / (mag1 * mag2);
+    return std::acos(std::clamp(angle_cos, -1.f, 1.f));
 }
 
-inline Fvector rotate_point(Fvector const& point, float const angle) {
-    float const cos_alpha = std::cos(angle);
-    float const sin_alpha = std::sin(angle);
+[[nodiscard]] inline Fvector rotate_point(const Fvector& point, const float angle) noexcept {
+    const float cos_alpha = std::cos(angle);
+    const float sin_alpha = std::sin(angle);
 
-    return Fvector().set(point.x * cos_alpha - point.z * sin_alpha, 0,
-                         point.x * sin_alpha + point.z * cos_alpha);
+    return {
+        point.x * cos_alpha - point.z * sin_alpha, 
+        0.0f,
+        point.x * sin_alpha + point.z * cos_alpha
+    };
 }

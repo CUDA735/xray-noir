@@ -1,5 +1,12 @@
 #pragma once
 
+#include <cmath>
+#include <algorithm>
+
+#if defined(XR_AVX) || defined(XR_AVX2) || defined(XR_SSE4) || defined(__SSE4_1__) || defined(__AVX__)
+#include <immintrin.h>
+#endif
+
 template <class T>
 struct _vector4 {
     typedef T TYPE;
@@ -9,166 +16,163 @@ struct _vector4 {
 
     T x, y, z, w;
 
-    T& operator[](int i) { return *((T*)this + i); }
-    T& operator[](int i) const { return *((T*)this + i); }
+    // C++17: constexpr та nodiscard
+    [[nodiscard]] constexpr T& operator[](int i) noexcept { return *((T*)this + i); }
+    [[nodiscard]] constexpr const T& operator[](int i) const noexcept { return *((T*)this + i); }
 
-    SelfRef set(T _x, T _y, T _z, T _w = 1) {
-        x = _x;
-        y = _y;
-        z = _z;
-        w = _w;
+    constexpr SelfRef set(T _x, T _y, T _z, T _w = 1) noexcept {
+        x = _x; y = _y; z = _z; w = _w;
         return *this;
     }
-    SelfRef set(const Self& v) {
-        x = v.x;
-        y = v.y;
-        z = v.z;
-        w = v.w;
+    constexpr SelfRef set(SelfCRef v) noexcept {
+        x = v.x; y = v.y; z = v.z; w = v.w;
         return *this;
     }
 
-    SelfRef add(const Self& v) {
-        x += v.x;
-        y += v.y;
-        z += v.z;
-        w += v.w;
+    // Для базової арифметики покладаємося на автовекторизацію компілятора (вона ефективніша за ручні інтринсики)
+    constexpr SelfRef add(SelfCRef v) noexcept {
+        x += v.x; y += v.y; z += v.z; w += v.w;
         return *this;
     }
-    SelfRef add(T s) {
-        x += s;
-        y += s;
-        z += s;
-        w += s;
+    constexpr SelfRef add(T s) noexcept {
+        x += s; y += s; z += s; w += s;
         return *this;
     }
-    SelfRef add(const Self& a, const Self& v) {
-        x = a.x + v.x;
-        y = a.y + v.y;
-        z = a.z + v.z;
-        w = a.w + v.w;
+    constexpr SelfRef add(SelfCRef a, SelfCRef v) noexcept {
+        x = a.x + v.x; y = a.y + v.y; z = a.z + v.z; w = a.w + v.w;
         return *this;
     }
-    SelfRef add(const Self& a, T s) {
-        x = a.x + s;
-        y = a.y + s;
-        z = a.z + s;
-        w = a.w + s;
+    constexpr SelfRef add(SelfCRef a, T s) noexcept {
+        x = a.x + s; y = a.y + s; z = a.z + s; w = a.w + s;
         return *this;
     }
 
-    SelfRef sub(T _x, T _y, T _z, T _w = 1) {
-        x -= _x;
-        y -= _y;
-        z -= _z;
-        w -= _w;
+    constexpr SelfRef sub(T _x, T _y, T _z, T _w = 1) noexcept {
+        x -= _x; y -= _y; z -= _z; w -= _w;
         return *this;
     }
-    SelfRef sub(const Self& v) {
-        x -= v.x;
-        y -= v.y;
-        z -= v.z;
-        w -= v.w;
+    constexpr SelfRef sub(SelfCRef v) noexcept {
+        x -= v.x; y -= v.y; z -= v.z; w -= v.w;
         return *this;
     }
-    SelfRef sub(T s) {
-        x -= s;
-        y -= s;
-        z -= s;
-        w -= s;
+    constexpr SelfRef sub(T s) noexcept {
+        x -= s; y -= s; z -= s; w -= s;
         return *this;
     }
-    SelfRef sub(const Self& a, const Self& v) {
-        x = a.x - v.x;
-        y = a.y - v.y;
-        z = a.z - v.z;
-        w = a.w - v.w;
+    constexpr SelfRef sub(SelfCRef a, SelfCRef v) noexcept {
+        x = a.x - v.x; y = a.y - v.y; z = a.z - v.z; w = a.w - v.w;
         return *this;
     }
-    SelfRef sub(const Self& a, T s) {
-        x = a.x - s;
-        y = a.y - s;
-        z = a.z - s;
-        w = a.w - s;
+    constexpr SelfRef sub(SelfCRef a, T s) noexcept {
+        x = a.x - s; y = a.y - s; z = a.z - s; w = a.w - s;
         return *this;
     }
 
-    SelfRef mul(T _x, T _y, T _z, T _w = 1) {
-        x *= _x;
-        y *= _y;
-        z *= _z;
-        w *= _w;
+    constexpr SelfRef mul(T _x, T _y, T _z, T _w = 1) noexcept {
+        x *= _x; y *= _y; z *= _z; w *= _w;
         return *this;
     }
-    SelfRef mul(const Self& v) {
-        x *= v.x;
-        y *= v.y;
-        z *= v.z;
-        w *= v.w;
+    constexpr SelfRef mul(SelfCRef v) noexcept {
+        x *= v.x; y *= v.y; z *= v.z; w *= v.w;
         return *this;
     }
-    SelfRef mul(T s) {
-        x *= s;
-        y *= s;
-        z *= s;
-        w *= s;
+    constexpr SelfRef mul(T s) noexcept {
+        x *= s; y *= s; z *= s; w *= s;
         return *this;
     }
-    SelfRef mul(const Self& a, const Self& v) {
-        x = a.x * v.x;
-        y = a.y * v.y;
-        z = a.z * v.z;
-        w = a.w * v.w;
+    constexpr SelfRef mul(SelfCRef a, SelfCRef v) noexcept {
+        x = a.x * v.x; y = a.y * v.y; z = a.z * v.z; w = a.w * v.w;
         return *this;
     }
-    SelfRef mul(const Self& a, T s) {
-        x = a.x * s;
-        y = a.y * s;
-        z = a.z * s;
-        w = a.w * s;
+    constexpr SelfRef mul(SelfCRef a, T s) noexcept {
+        x = a.x * s; y = a.y * s; z = a.z * s; w = a.w * s;
         return *this;
     }
 
-    SelfRef div(const Self& v) {
-        x /= v.x;
-        y /= v.y;
-        z /= v.z;
-        w /= v.w;
+    constexpr SelfRef div(SelfCRef v) noexcept {
+        x /= v.x; y /= v.y; z /= v.z; w /= v.w;
         return *this;
     }
-    SelfRef div(T s) {
-        x /= s;
-        y /= s;
-        z /= s;
-        w /= s;
+    constexpr SelfRef div(T s) noexcept {
+        x /= s; y /= s; z /= s; w /= s;
         return *this;
     }
-    SelfRef div(const Self& a, const Self& v) {
-        x = a.x / v.x;
-        y = a.y / v.y;
-        z = a.z / v.z;
-        w = a.w / v.w;
+    constexpr SelfRef div(SelfCRef a, SelfCRef v) noexcept {
+        x = a.x / v.x; y = a.y / v.y; z = a.z / v.z; w = a.w / v.w;
         return *this;
     }
-    SelfRef div(const Self& a, T s) {
-        x = a.x / s;
-        y = a.y / s;
-        z = a.z / s;
-        w = a.w / s;
+    constexpr SelfRef div(SelfCRef a, T s) noexcept {
+        x = a.x / s; y = a.y / s; z = a.z / s; w = a.w / s;
         return *this;
     }
 
-    BOOL similar(const Self& v, T E = EPS_L) {
-        return xr::abs(x - v.x) < E && xr::abs(y - v.y) < E && xr::abs(z - v.z) < E && xr::abs(w - v.w) < E;
+    // Замінено BOOL на bool для відповідності стандартам C++17
+    [[nodiscard]] constexpr bool similar(SelfCRef v, T E = EPS_L) const noexcept {
+        return std::abs(x - v.x) < E && std::abs(y - v.y) < E && std::abs(z - v.z) < E && std::abs(w - v.w) < E;
     }
 
-    T magnitude_sqr() const { return x * x + y * y + z * z + w * w; }
-    T magnitude() const { return std::sqrt(magnitude_sqr()); }
-    SelfRef normalize() { return mul(1 / magnitude()); }
+    // C++17 Динамічна векторизація
+    [[nodiscard]] inline T magnitude_sqr() const noexcept { 
+        if constexpr (std::is_same_v<T, float>) {
+#if defined(XR_AVX) || defined(XR_AVX2) || defined(XR_SSE4) || defined(__SSE4_1__)
+            // Безпечне не-вирівняне завантаження 16 байт прямо з пам'яті
+            __m128 vec = _mm_loadu_ps(&x);
+            // 0xFF означає: перемножити всі 4 і записати суму у всі 4 слоти
+            return _mm_cvtss_f32(_mm_dp_ps(vec, vec, 0xFF));
+#else
+            return x * x + y * y + z * z + w * w;
+#endif
+        } else {
+            return x * x + y * y + z * z + w * w; 
+        }
+    }
 
-    SelfRef normalize_as_plane() { return mul(1 / std::sqrt(x * x + y * y + z * z)); }
+    [[nodiscard]] inline T magnitude() const noexcept { 
+        if constexpr (std::is_same_v<T, float>) {
+#if defined(XR_AVX) || defined(XR_AVX2) || defined(XR_SSE4) || defined(__SSE4_1__)
+            __m128 vec = _mm_loadu_ps(&x);
+            return _mm_cvtss_f32(_mm_sqrt_ss(_mm_dp_ps(vec, vec, 0xFF)));
+#else
+            return std::sqrt(magnitude_sqr());
+#endif
+        } else {
+            return std::sqrt(magnitude_sqr()); 
+        }
+    }
 
-    SelfRef lerp(const Self& p1, const Self& p2, T t) {
-        T invt = 1.f - t;
+    SelfRef normalize() noexcept { 
+        if constexpr (std::is_same_v<T, float>) {
+#if defined(XR_AVX) || defined(XR_AVX2) || defined(XR_SSE4) || defined(__SSE4_1__)
+            __m128 vec = _mm_loadu_ps(&x);
+            __m128 dp = _mm_dp_ps(vec, vec, 0xFF);
+            __m128 rsqrt = _mm_rsqrt_ps(dp); // Апаратний обернений корінь
+            _mm_storeu_ps(&x, _mm_mul_ps(vec, rsqrt));
+            return *this;
+#endif
+        }
+        return mul(T(1) / magnitude()); 
+    }
+
+    // Оптимізація для побудови фрустума і кліпінгу
+    SelfRef normalize_as_plane() noexcept { 
+        if constexpr (std::is_same_v<T, float>) {
+#if defined(XR_AVX) || defined(XR_AVX2) || defined(XR_SSE4) || defined(__SSE4_1__)
+            __m128 vec = _mm_loadu_ps(&x);
+            // 0x7F означає: взяти квадрат суми ТІЛЬКИ x, y, z (0111), 
+            // але записати результат в усі 4 слоти регістра (1111)
+            __m128 dp = _mm_dp_ps(vec, vec, 0x7F);
+            __m128 rsqrt = _mm_rsqrt_ps(dp);
+            
+            // За одну операцію масштабуємо x, y, z ТА w (!)
+            _mm_storeu_ps(&x, _mm_mul_ps(vec, rsqrt));
+            return *this;
+#endif
+        }
+        return mul(T(1) / std::sqrt(x * x + y * y + z * z)); 
+    }
+
+    constexpr SelfRef lerp(SelfCRef p1, SelfCRef p2, T t) noexcept {
+        T invt = T(1) - t;
         x = p1.x * invt + p2.x * t;
         y = p1.y * invt + p2.y * t;
         z = p1.z * invt + p2.z * t;
@@ -186,10 +190,8 @@ typedef __declspec(align(16)) _vector4<double> Dvector4a;
 typedef __declspec(align(16)) _vector4<s32> Ivector4a;
 
 namespace xr {
-
-template <class T>
-bool valid(const _vector4<T>& v) {
-    return valid(v.x) && valid(v.y) && valid(v.z) && valid(v.w);
-}
-
-} // xr namespace
+    template <class T>
+    [[nodiscard]] constexpr bool valid(const _vector4<T>& v) noexcept {
+        return valid(v.x) && valid(v.y) && valid(v.z) && valid(v.w);
+    }
+} // namespace xr
