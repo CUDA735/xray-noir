@@ -3410,3 +3410,75 @@ end
 function hide_subtitle(actor, npc, p)
     ui_subtitle.hide()
 end
+
+-- =======================================================
+-- Universal Cinematic Effects (DoF & FOV)
+-- =======================================================
+
+-- Manual DoF. Call in logic: %=set_dof(0.5:3.0:5.0)%
+-- p[1] = near, p[2] = focus, p[3] = far
+function set_dof(actor, npc, p)
+    if p and p[1] and p[2] and p[3] then
+        level.set_dof_params(tonumber(p[1]), tonumber(p[2]), tonumber(p[3]))
+    else
+        abort("! ERROR: set_dof requires 3 parameters (near:focus:far)")
+    end
+end
+
+-- Focus on object. Call in logic: %=set_dof_obj(yan_test_box:0.2:1.5)%
+function set_dof_obj(actor, npc, p)
+    if p and p[1] and p[2] and p[3] then
+        local obj_id = nil
+        local target_name = p[1]
+        
+        -- 1. Check if it is a [story_object] from logic
+        local cl_obj = get_story_object(target_name)
+        if cl_obj then
+            obj_id = cl_obj:id()
+        end
+        
+        -- 2. If not found, search in the classic story_ids.script
+        if not obj_id then
+            local sid = story_ids[target_name]
+            if sid then
+                local sv_obj = alife():story_object(sid)
+                if sv_obj then obj_id = sv_obj.id end
+            end
+        end
+        
+        -- 3. If still not found, search for an exact match by spawn name
+        if not obj_id then
+            local sv_obj = alife():object(target_name)
+            if sv_obj then obj_id = sv_obj.id end
+        end
+        
+        -- Apply DoF if any ID was found
+        if obj_id then
+            level.set_dof_by_id(obj_id, tonumber(p[2]), tonumber(p[3]))
+        else
+            printf("! ERROR: set_dof_obj - object '%s' not found on the level!", target_name)
+        end
+    else
+        printf("! ERROR: set_dof_obj requires 3 parameters (story_id:near_offset:far_offset)")
+    end
+end
+
+-- Reset DoF. Call in logic: %=restore_dof%
+function restore_dof(actor, npc)
+    level.restore_dof()
+end
+
+-- Change FOV (Zoom). Call in logic: %=set_fov(45:2.5)%
+-- p[1] = target_fov, p[2] = transition_time
+function set_fov(actor, npc, p)
+    if p and p[1] and p[2] then
+        level.set_camera_fov(tonumber(p[1]), tonumber(p[2]))
+    else
+        abort("! ERROR: set_fov requires 2 parameters (fov:time)")
+    end
+end
+
+-- Reset FOV. Call in logic: %=restore_fov%
+function restore_fov(actor, npc)
+    level.restore_camera_fov()
+end

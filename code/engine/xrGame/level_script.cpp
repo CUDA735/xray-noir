@@ -38,6 +38,8 @@
 #include "ui/UIInventoryUtilities.h"
 #include "alife_object_registry.h"
 #include "xrServer_Objects_ALife_Monsters.h"
+#include "GamePersistent.h"
+#include "CameraEffector.h"
 
 using namespace luabind;
 
@@ -279,6 +281,94 @@ void hide_indicators_safe() {
     }
     psActorFlags.set(AF_GODMODE_RT, TRUE);
 }
+
+// --- Custom Dynamic DoF Control ---
+
+// Sets custom Depth of Field parameters for cutscenes or specific states.
+// near_blur: distance where near blur ends (starts getting sharp).
+// focus_dist: distance of perfect focus.
+// far_blur: distance where far blur begins (starts getting blurry).
+void set_dof_params_script(float near_blur, float focus_dist, float far_blur) {
+    if (g_pGamePersistent) {
+        Fvector dof;
+        dof.set(near_blur, focus_dist, far_blur);
+        // Overrides base DoF. Handled smoothly by GamePersistent::UpdateDof().
+        GamePersistent().SetEffectorDOF(dof); 
+    }
+}
+
+// Restores default engine DoF settings (e.g., after a cutscene ends).
+void restore_dof_script() {
+    if (g_pGamePersistent) {
+        GamePersistent().RestoreEffectorDOF();
+    }
+}
+
+// Calculates distance to an object and sets DoF focus on it.
+// id: network ID of the target object.
+// near_offset: sharp area range in front of the object.
+// far_offset: sharp area range behind the object.
+void set_dof_on_object_script(u16 id, float near_offset, float far_offset) {
+    CGameObject* obj = smart_cast<CGameObject*>(Level().Objects.net_Find(id));
+    
+    if (obj && g_pGamePersistent) {
+        float dist = obj->Position().distance_to(Device.vCameraPosition);
+        
+        Fvector dof;
+        dof.set(dist - near_offset, dist, dist + far_offset);
+        GamePersistent().SetEffectorDOF(dof);
+    }
+}
+
+// --- Custom FOV Effector ---
+class CScriptFovEffector : public CEffectorCam {
+    float m_fStartFov;
+    float m_fTargetFov;
+    float m_fTransitionTime;
+    float m_fCurrentTime;
+public:
+    // Using safe custom ID to avoid engine conflicts
+    CScriptFovEffector(float target_fov, float time) : CEffectorCam((ECamEffectorType)(effCustomEffectorStartID + 1), 100000.f) {
+        m_fTargetFov = target_fov;
+        m_fTransitionTime = time;
+        m_fCurrentTime = 0.0f;
+        m_fStartFov = Device.fFOV; // Capture base FOV at start
+    }
+
+    virtual BOOL ProcessCam(SCamEffectorInfo& info) {
+        if (m_fTransitionTime <= 0.001f) {
+            info.fFov = m_fTargetFov; // Instant snap
+        } else {
+            m_fCurrentTime += Device.fTimeDelta;
+            float t = m_fCurrentTime / m_fTransitionTime;
+            clamp(t, 0.0f, 1.0f);
+            
+            // Linear interpolation between start and target FOV
+            info.fFov = m_fStartFov + (m_fTargetFov - m_fStartFov) * t;
+        }
+        return TRUE; // Keep effector alive until manually removed
+    }
+};
+
+// Initiates a smooth camera FOV transition over time
+// fov: target field of view in degrees
+// time: transition duration in seconds
+void set_camera_fov_script(float fov, float time) {
+    if (!Actor()) return;
+    
+    // Remove existing script FOV effector to prevent stacking
+    Actor()->Cameras().RemoveCamEffector((ECamEffectorType)(effCustomEffectorStartID + 1));
+    
+    CScriptFovEffector* eff = xr_new<CScriptFovEffector>(fov, time);
+    Actor()->Cameras().AddCamEffector(eff);
+}
+
+// Restores standard player FOV by killing the custom effector
+void restore_camera_fov_script() {
+    if (!Actor()) return;
+    Actor()->Cameras().RemoveCamEffector((ECamEffectorType)(effCustomEffectorStartID + 1));
+}
+// ----------------------------------
 
 void show_indicators() {
     if (CurrentGameUI()) {
@@ -624,6 +714,16 @@ void CLevel::script_register(lua_State* L) {
         def("hide_indicators", hide_indicators), def("hide_indicators_safe", hide_indicators_safe),
 
         def("show_indicators", show_indicators), def("show_weapon", show_weapon),
+		
+		// Custom DoF exports
+        def("set_dof_params", &set_dof_params_script),
+		def("set_dof_by_id", &set_dof_on_object_script),
+        def("restore_dof",    &restore_dof_script),
+		
+		// Custom FOV exports
+        def("set_camera_fov",     &set_camera_fov_script),
+        def("restore_camera_fov", &restore_camera_fov_script),
+		
         def("add_call",
             ((void (*)(const luabind::functor<bool>&, const luabind::functor<void>&)) & add_call)),
         def("add_call", ((void (*)(const luabind::object&, const luabind::functor<bool>&,
