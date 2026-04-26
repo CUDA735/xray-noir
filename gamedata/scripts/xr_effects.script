@@ -3411,74 +3411,249 @@ function hide_subtitle(actor, npc, p)
     ui_subtitle.hide()
 end
 
--- =======================================================
--- Universal Cinematic Effects (DoF & FOV)
--- =======================================================
+-- ========================================================================
+-- CINEMATIC DIRECTOR HOOKS (For .ltx logic files)
+-- ========================================================================
 
--- Manual DoF. Call in logic: %=set_dof(0.5:3.0:5.0)%
--- p[1] = near, p[2] = focus, p[3] = far
-function set_dof(actor, npc, p)
-    if p and p[1] and p[2] and p[3] then
-        level.set_dof_params(tonumber(p[1]), tonumber(p[2]), tonumber(p[3]))
+-- ========================================================================
+-- Function:    set_cam_look_obj
+-- Description: Smoothly rotates and optionally moves the camera to an object.
+--              Can also dynamically change FOV (zoom) during the transition.
+--
+-- Usage: %=set_cam_look_obj(target_name:time:approach_dist:target_fov)%
+--
+-- Parameters:
+--   1. target_name   (string) - The story_id or name of the target object. (Required)
+--   2. time          (float)  - Transition duration in seconds. (Required)
+--   3. approach_dist (float)  - Distance (meters) to move toward the target. (Optional, Default: 0)
+--   4. target_fov    (float)  - Camera FOV to zoom in/out. (Optional, Default: 0/No change)
+-- ========================================================================
+function set_cam_look_obj(actor, npc, p)
+    if p and p[1] and p[2] then 
+        director.set_cam_cinematic_obj(p[1], tonumber(p[2]), p[3], p[4]) 
     else
-        abort("! ERROR: set_dof requires 3 parameters (near:focus:far)")
+        abort("! ERROR: xr_effects.set_cam_look_obj requires (target_name:time)")
     end
 end
 
--- Focus on object. Call in logic: %=set_dof_obj(yan_test_box:0.2:1.5)%
-function set_dof_obj(actor, npc, p)
-    if p and p[1] and p[2] and p[3] then
-        local obj_id = nil
-        local target_name = p[1]
-        
-        -- 1. Check if it is a [story_object] from logic
-        local cl_obj = get_story_object(target_name)
-        if cl_obj then
-            obj_id = cl_obj:id()
-        end
-        
-        -- 2. If not found, search in the classic story_ids.script
-        if not obj_id then
-            local sid = story_ids[target_name]
-            if sid then
-                local sv_obj = alife():story_object(sid)
-                if sv_obj then obj_id = sv_obj.id end
-            end
-        end
-        
-        -- 3. If still not found, search for an exact match by spawn name
-        if not obj_id then
-            local sv_obj = alife():object(target_name)
-            if sv_obj then obj_id = sv_obj.id end
-        end
-        
-        -- Apply DoF if any ID was found
-        if obj_id then
-            level.set_dof_by_id(obj_id, tonumber(p[2]), tonumber(p[3]))
-        else
-            printf("! ERROR: set_dof_obj - object '%s' not found on the level!", target_name)
-        end
+-- ========================================================================
+-- Function:    set_cam_look_pos
+-- Description: Smoothly rotates and optionally moves the camera to a static 3D coordinate.
+--
+-- Usage: %=set_cam_look_pos(x:y:z:time:approach_dist:target_fov)%
+--
+-- Parameters:
+--   1. x             (float) - Target X coordinate. (Required)
+--   2. y             (float) - Target Y coordinate. (Required)
+--   3. z             (float) - Target Z coordinate. (Required)
+--   4. time          (float) - Transition duration in seconds. (Required)
+--   5. approach_dist (float) - Distance (meters) to move toward the target. (Optional, Default: 0)
+--   6. target_fov    (float) - Camera FOV to zoom in/out. (Optional, Default: 0/No change)
+-- ========================================================================
+function set_cam_look_pos(actor, npc, p)
+    if p and p[1] and p[2] and p[3] and p[4] then 
+        director.set_cam_cinematic_pos(p[1], p[2], p[3], tonumber(p[4]), p[5], p[6]) 
     else
-        printf("! ERROR: set_dof_obj requires 3 parameters (story_id:near_offset:far_offset)")
+        abort("! ERROR: xr_effects.set_cam_look_pos requires (x:y:z:time)")
     end
 end
 
--- Reset DoF. Call in logic: %=restore_dof%
-function restore_dof(actor, npc)
-    level.restore_dof()
+-- ========================================================================
+-- Function:    restore_cam_look
+-- Description: Restores default camera control to the player.
+--
+-- Usage: %=restore_cam_look(true)% OR %=restore_cam_look%
+--
+-- Parameters:
+--   1. maintain_angle (string) - If "true", the player will physically face 
+--                                the direction the cinematic camera was looking. (Optional)
+-- ========================================================================
+function restore_cam_look(actor, npc, p)
+    local maintain = (p and p[1] == "true")
+    director.restore_cam_look(maintain)
 end
 
--- Change FOV (Zoom). Call in logic: %=set_fov(45:2.5)%
--- p[1] = target_fov, p[2] = transition_time
+function hide_actor_weapon(actor, npc)
+    director.hide_weapon()
+end
+
+function restore_actor_weapon(actor, npc)
+    director.restore_weapon()
+end
+
+-- ========================================================================
+-- Function:    set_fov
+-- Description: Smoothly changes the camera Field of View (Zoom) over time 
+--              without altering camera rotation or position.
+--
+-- Usage: %=set_fov(target_fov:time)%
+--
+-- Parameters:
+--   1. target_fov (float) - The desired Field of View in degrees. (Required)
+--   2. time       (float) - Transition duration in seconds. (Required)
+-- ========================================================================
 function set_fov(actor, npc, p)
-    if p and p[1] and p[2] then
-        level.set_camera_fov(tonumber(p[1]), tonumber(p[2]))
+    if p and p[1] and p[2] then 
+        director.set_fov(tonumber(p[1]), tonumber(p[2])) 
     else
-        abort("! ERROR: set_fov requires 2 parameters (fov:time)")
+        abort("! ERROR: xr_effects.set_fov requires (target_fov:time)")
     end
 end
 
--- Reset FOV. Call in logic: %=restore_fov%
-function restore_fov(actor, npc)
-    level.restore_camera_fov()
+-- ========================================================================
+-- Function:    restore_fov
+-- Description: Instantly restores the default player FOV.
+--
+-- Usage: %=restore_fov%
+-- ========================================================================
+function restore_fov(actor, npc) 
+    director.restore_fov() 
+end
+
+-- ========================================================================
+-- Function:    set_dof
+-- Description: Applies a static Depth of Field (blur) effect to the screen.
+--
+-- Usage: %=set_dof(power)%
+--
+-- Parameters:
+--   1. power (float) - The intensity of the blur (e.g., 0.2 for strong blur). (Required)
+-- ========================================================================
+function set_dof(actor, npc, p)
+    if p and p[1] then 
+        director.set_dof(tonumber(p[1])) 
+    else
+        abort("! ERROR: xr_effects.set_dof requires (power)")
+    end
+end
+
+-- ========================================================================
+-- Function:    set_dof_obj
+-- Description: Dynamically focuses Depth of Field on a specific object, 
+--              blurring the foreground and background.
+--
+-- Usage: %=set_dof_obj(target_name:power)%
+--
+-- Parameters:
+--   1. target_name (string) - The story_id or name of the target object. (Required)
+--   2. power       (float)  - The intensity of the blur around the object. (Required)
+-- ========================================================================
+function set_dof_obj(actor, npc, p)
+    if p and p[1] and p[2] then 
+        director.set_dof_obj(p[1], tonumber(p[2])) 
+    else
+        abort("! ERROR: xr_effects.set_dof_obj requires (target_name:power)")
+    end
+end
+
+-- ========================================================================
+-- Function:    restore_dof
+-- Description: Removes all Depth of Field effects and restores sharp vision.
+--
+-- Usage: %=restore_dof%
+-- ========================================================================
+function restore_dof(actor, npc) 
+    director.restore_dof() 
+end
+
+-- ========================================================================
+-- Function:    fly_camera_path
+-- Description: Flies the camera smoothly along a standard SDK patrol path.
+--              Can optionally track a specific object while flying.
+--
+-- Usage: %=fly_camera_path(patrol_walk_name:time:focus_object_name)%
+--
+-- Parameters:
+--   1. patrol_name  (string) - Name of the patrol path on the level. (Required)
+--   2. time         (float)  - Total flight duration in seconds. (Required)
+--   3. focus_target (string) - story_id of the object to look at during flight. (Optional)
+--
+-- Examples:
+--   - Fly and look forward: %=fly_camera_path(scene_path_1:10.0)%
+--   - Fly but keep the camera focused on a mutant: %=fly_camera_path(scene_path_1:10.0:bloodsucker_01)%
+-- ========================================================================
+function fly_camera_path(actor, npc, p)
+    if p and p[1] and p[2] then 
+        director.start_camera_flight_path(p[1], tonumber(p[2]), p[3]) 
+    else
+        abort("! ERROR: xr_effects.fly_camera_path requires (patrol_name:time)")
+    end
+end
+
+-- ========================================================================
+-- Function:    play_hud_anim
+-- Description: Forces the currently equipped weapon/item to play a specific HUD animation.
+--
+-- Usage: %=play_hud_anim(anim_name)%
+--
+-- Parameters:
+--   1. anim_name (string) - The animation alias from the weapon's .ltx config 
+--                           (MUST start with "anm_", e.g., anm_reload). (Required)
+-- ========================================================================
+function play_hud_anim(actor, npc, p)
+    if p and p[1] then 
+        director.play_hud_anim(p[1]) 
+    else
+        abort("! ERROR: xr_effects.play_hud_anim requires (anim_name)")
+    end
+end
+
+-- ========================================================================
+-- Function:    actor_shoot_start
+-- Description: Instantly snaps the camera to the target and forces the actor 
+--              to press and hold the weapon trigger.
+--
+-- Usage: %=actor_shoot_start(target_name)%
+--
+-- Parameters:
+--   1. target_name (string) - The story_id or name of the target to aim at. (Required)
+-- ========================================================================
+function actor_shoot_start(actor, npc, p)
+    if p and p[1] then 
+        director.actor_shoot_start(p[1]) 
+    else
+        abort("! ERROR: xr_effects.actor_shoot_start requires (target_name)")
+    end
+end
+
+-- ========================================================================
+-- Function:    actor_shoot_stop
+-- Description: Forces the actor to release the weapon trigger.
+--
+-- Usage: %=actor_shoot_stop%
+-- ========================================================================
+function actor_shoot_stop(actor, npc) 
+    director.actor_shoot_stop() 
+end
+
+-- ========================================================================
+-- Function:    play_sound_3d_obj
+-- Description: Plays a fire-and-forget 3D sound originating from a specific object.
+--
+-- Usage: %=play_sound_3d_obj(sound_path:target_name:volume:pitch)%
+--
+-- Parameters:
+--   1. sound_path  (string) - Path to the .ogg file (e.g., monsters\ghost\cry). (Required)
+--   2. target_name (string) - The story_id or name of the object emitting sound. (Required)
+--   3. volume      (float)  - Sound volume multiplier. (Optional, Default: 1.0)
+--   4. pitch       (float)  - Sound frequency multiplier. (Optional, Default: 1.0)
+-- ========================================================================
+function play_sound_3d_obj(actor, npc, p)
+    if p and p[1] and p[2] then
+        local vol = p[3] and tonumber(p[3]) or 1.0
+        local pitch = p[4] and tonumber(p[4]) or 1.0
+        director.play_3d_sound(p[1], p[2], vol, pitch)
+    else
+        abort("! ERROR: xr_effects.play_sound_3d_obj requires (sound_path:target_name)")
+    end
+end
+
+-- ========================================================================
+-- Function:    stop_custom_sounds
+-- Description: Instantly stops all sounds started by play_sound_3d_obj.
+--
+-- Usage: %=stop_custom_sounds%
+-- ========================================================================
+function stop_custom_sounds(actor, npc) 
+    director.stop_custom_sounds() 
 end

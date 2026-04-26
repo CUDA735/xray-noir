@@ -40,6 +40,13 @@
 #include "xrServer_Objects_ALife_Monsters.h"
 #include "GamePersistent.h"
 #include "CameraEffector.h"
+#include "../xrEngine/CameraBase.h"
+#include "../xrEngine/CameraManager.h"
+#include "../xrSound/Sound.h"
+#include "inventory.h"
+#include "HudItem.h"
+#include "Weapon.h"
+#include "xr_level_controller.h"
 
 using namespace luabind;
 
@@ -282,93 +289,347 @@ void hide_indicators_safe() {
     psActorFlags.set(AF_GODMODE_RT, TRUE);
 }
 
-// --- Custom Dynamic DoF Control ---
+// ==============================================================================
+// CUSTOM CINEMATIC TOOLSET (DoF, FOV, Cinematic Camera, HUD Anims, Actor Fire, Sound)
+// ==============================================================================
 
-// Sets custom Depth of Field parameters for cutscenes or specific states.
-// near_blur: distance where near blur ends (starts getting sharp).
-// focus_dist: distance of perfect focus.
-// far_blur: distance where far blur begins (starts getting blurry).
+// --- Depth of Field (DoF) Control ---
 void set_dof_params_script(float near_blur, float focus_dist, float far_blur) {
     if (g_pGamePersistent) {
         Fvector dof;
         dof.set(near_blur, focus_dist, far_blur);
-        // Overrides base DoF. Handled smoothly by GamePersistent::UpdateDof().
         GamePersistent().SetEffectorDOF(dof); 
     }
 }
 
-// Restores default engine DoF settings (e.g., after a cutscene ends).
 void restore_dof_script() {
-    if (g_pGamePersistent) {
-        GamePersistent().RestoreEffectorDOF();
-    }
+    if (g_pGamePersistent) GamePersistent().RestoreEffectorDOF();
 }
 
-// Calculates distance to an object and sets DoF focus on it.
-// id: network ID of the target object.
-// near_offset: sharp area range in front of the object.
-// far_offset: sharp area range behind the object.
 void set_dof_on_object_script(u16 id, float near_offset, float far_offset) {
     CGameObject* obj = smart_cast<CGameObject*>(Level().Objects.net_Find(id));
-    
     if (obj && g_pGamePersistent) {
         float dist = obj->Position().distance_to(Device.vCameraPosition);
-        
         Fvector dof;
         dof.set(dist - near_offset, dist, dist + far_offset);
         GamePersistent().SetEffectorDOF(dof);
     }
 }
 
-// --- Custom FOV Effector ---
+// --- Standalone FOV Effector ---
 class CScriptFovEffector : public CEffectorCam {
     float m_fStartFov;
     float m_fTargetFov;
     float m_fTransitionTime;
     float m_fCurrentTime;
 public:
-    // Using safe custom ID to avoid engine conflicts
     CScriptFovEffector(float target_fov, float time) : CEffectorCam((ECamEffectorType)(effCustomEffectorStartID + 1), 100000.f) {
         m_fTargetFov = target_fov;
         m_fTransitionTime = time;
         m_fCurrentTime = 0.0f;
-        m_fStartFov = Device.fFOV; // Capture base FOV at start
+        m_fStartFov = Device.fFOV; 
     }
 
     virtual BOOL ProcessCam(SCamEffectorInfo& info) {
         if (m_fTransitionTime <= 0.001f) {
-            info.fFov = m_fTargetFov; // Instant snap
+            info.fFov = m_fTargetFov; 
         } else {
             m_fCurrentTime += Device.fTimeDelta;
             float t = m_fCurrentTime / m_fTransitionTime;
             clamp(t, 0.0f, 1.0f);
-            
-            // Linear interpolation between start and target FOV
             info.fFov = m_fStartFov + (m_fTargetFov - m_fStartFov) * t;
         }
-        return TRUE; // Keep effector alive until manually removed
+        return TRUE; 
     }
 };
 
-// Initiates a smooth camera FOV transition over time
-// fov: target field of view in degrees
-// time: transition duration in seconds
 void set_camera_fov_script(float fov, float time) {
     if (!Actor()) return;
-    
-    // Remove existing script FOV effector to prevent stacking
     Actor()->Cameras().RemoveCamEffector((ECamEffectorType)(effCustomEffectorStartID + 1));
-    
     CScriptFovEffector* eff = xr_new<CScriptFovEffector>(fov, time);
     Actor()->Cameras().AddCamEffector(eff);
 }
 
-// Restores standard player FOV by killing the custom effector
 void restore_camera_fov_script() {
     if (!Actor()) return;
     Actor()->Cameras().RemoveCamEffector((ECamEffectorType)(effCustomEffectorStartID + 1));
 }
-// ----------------------------------
+
+// --- Unified Cinematic Effector (Look + Dolly + FOV) ---
+class CScriptCinematicEffector : public CEffectorCam {
+    Fvector m_vStartPos;
+    Fvector m_vStartDir;
+    u16 m_target_id;
+    Fvector m_target_pos;
+    float m_fApproachDist;
+    float m_fStartFov;
+    float m_fTargetFov;
+    bool  m_bChangeFov;
+    float m_fTransitionTime;
+    float m_fCurrentTime;
+    bool m_bDynamic;
+
+public:
+    CScriptCinematicEffector(u16 target_id, Fvector target_pos, float approach_dist, float target_fov, float time) 
+        : CEffectorCam((ECamEffectorType)(effCustomEffectorStartID + 2), 100000.f) 
+    {
+        m_target_id = target_id;
+        m_target_pos = target_pos;
+        m_fApproachDist = approach_dist;
+        m_fStartFov = Device.fFOV;
+        m_fTargetFov = target_fov;
+        m_bChangeFov = (target_fov > 0.1f);
+        m_fTransitionTime = time;
+        m_fCurrentTime = 0.0f;
+        m_vStartPos = Device.vCameraPosition;
+        m_vStartDir = Device.vCameraDirection; 
+        m_bDynamic = (target_id != 0xffff);
+    }
+
+    virtual BOOL ProcessCam(SCamEffectorInfo& info) {
+        Fvector target_world = m_target_pos;
+
+        if (m_bDynamic) {
+            CGameObject* target_obj = smart_cast<CGameObject*>(Level().Objects.net_Find(m_target_id));
+            if (target_obj) {
+                // Smart focus: entity head/chest level vs geometric center for props
+                if (smart_cast<CEntityAlive*>(target_obj)) {
+                    target_world = target_obj->Position();
+                    target_world.y += 1.2f; 
+                } else {
+                    target_obj->Center(target_world); 
+                }
+            }
+        }
+
+        m_fCurrentTime += Device.fTimeDelta;
+        float t = (m_fTransitionTime > 0.001f) ? (m_fCurrentTime / m_fTransitionTime) : 1.0f;
+        clamp(t, 0.0f, 1.0f);
+        float smooth_t = t * t * (3.0f - 2.0f * t);
+
+        // Rotation (Look at)
+        Fvector target_dir;
+        target_dir.sub(target_world, info.p).normalize_safe();
+        if (m_fTransitionTime <= 0.001f) {
+            info.d = target_dir; 
+        } else {
+            Fvector current_dir;
+            current_dir.lerp(m_vStartDir, target_dir, smooth_t).normalize_safe();
+            info.d = current_dir;
+        }
+
+        // Dolly (Approach distance)
+        if (m_fApproachDist > 0.01f) {
+            Fvector dir_to_target;
+            dir_to_target.sub(target_world, m_vStartPos).normalize_safe();
+            Fvector final_pos = dir_to_target;
+            final_pos.mul(m_fApproachDist);
+            final_pos.add(m_vStartPos);
+            info.p.lerp(m_vStartPos, final_pos, smooth_t);
+        }
+
+        // Zoom (FOV change)
+        if (m_bChangeFov) {
+            info.fFov = m_fStartFov + (m_fTargetFov - m_fStartFov) * smooth_t;
+        }
+
+        info.n.set(0.f, 1.f, 0.f); // Lock camera roll
+        return TRUE;
+    }
+};
+
+void run_cinematic_camera_obj_script(u16 target_id, float time, float approach_dist, float target_fov) {
+    if (!Actor()) return;
+    Actor()->Cameras().RemoveCamEffector((ECamEffectorType)(effCustomEffectorStartID + 2));
+    CScriptCinematicEffector* eff = xr_new<CScriptCinematicEffector>(target_id, Fvector().set(0,0,0), approach_dist, target_fov, time);
+    Actor()->Cameras().AddCamEffector(eff);
+}
+
+void run_cinematic_camera_pos_script(Fvector pos, float time, float approach_dist, float target_fov) {
+    if (!Actor()) return;
+    Actor()->Cameras().RemoveCamEffector((ECamEffectorType)(effCustomEffectorStartID + 2));
+    CScriptCinematicEffector* eff = xr_new<CScriptCinematicEffector>(0xffff, pos, approach_dist, target_fov, time);
+    Actor()->Cameras().AddCamEffector(eff);
+}
+
+void restore_camera_look_script(bool bMaintainOrientation) {
+    if (!Actor()) return;
+    if (bMaintainOrientation) {
+        float h, p;
+        Device.vCameraDirection.getHP(h, p);
+        Actor()->cam_Active()->yaw   = -h;
+        Actor()->cam_Active()->pitch = -p;
+    }
+    Actor()->Cameras().RemoveCamEffector((ECamEffectorType)(effCustomEffectorStartID + 2));
+}
+
+// --- Cinematic Spline Flight Effector (Catmull-Rom) ---
+static xr_vector<Fvector> g_flight_path; 
+
+class CScriptFlightEffector : public CEffectorCam {
+    xr_vector<Fvector> m_points;
+    float m_fTransitionTime;
+    float m_fCurrentTime;
+    
+    // Look Target Variables
+    bool m_bUseTarget;
+    u16 m_target_id;
+    Fvector m_target_pos;
+    bool m_bDynamic;
+
+public:
+    CScriptFlightEffector(float time, bool use_target, u16 target_id, Fvector target_pos) 
+        : CEffectorCam((ECamEffectorType)(effCustomEffectorStartID + 3), 100000.f) 
+    {
+        m_fTransitionTime = time;
+        m_fCurrentTime = 0.0f;
+        m_bUseTarget = use_target;
+        m_target_id = target_id;
+        m_target_pos = target_pos;
+        m_bDynamic = (target_id != 0xffff);
+        
+        m_points = g_flight_path;
+        g_flight_path.clear();
+    }
+
+    Fvector GetSplinePoint(float t) {
+        int p0, p1, p2, p3;
+        int max_p = m_points.size() - 1;
+        float t_scaled = t * max_p;
+        int segment = iFloor(t_scaled);
+        float local_t = t_scaled - segment;
+        p1 = segment;
+        p2 = (p1 + 1 > max_p) ? max_p : p1 + 1;
+        p0 = (p1 - 1 < 0) ? p1 : p1 - 1;
+        p3 = (p2 + 1 > max_p) ? p2 : p2 + 1;
+        float t2 = local_t * local_t;
+        float t3 = t2 * local_t;
+        Fvector res;
+        res.x = 0.5f * ((2.0f * m_points[p1].x) + (-m_points[p0].x + m_points[p2].x) * local_t + (2.0f * m_points[p0].x - 5.0f * m_points[p1].x + 4.0f * m_points[p2].x - m_points[p3].x) * t2 + (-m_points[p0].x + 3.0f * m_points[p1].x - 3.0f * m_points[p2].x + m_points[p3].x) * t3);
+        res.y = 0.5f * ((2.0f * m_points[p1].y) + (-m_points[p0].y + m_points[p2].y) * local_t + (2.0f * m_points[p0].y - 5.0f * m_points[p1].y + 4.0f * m_points[p2].y - m_points[p3].y) * t2 + (-m_points[p0].y + 3.0f * m_points[p1].y - 3.0f * m_points[p2].y + m_points[p3].y) * t3);
+        res.z = 0.5f * ((2.0f * m_points[p1].z) + (-m_points[p0].z + m_points[p2].z) * local_t + (2.0f * m_points[p0].z - 5.0f * m_points[p1].z + 4.0f * m_points[p2].z - m_points[p3].z) * t2 + (-m_points[p0].z + 3.0f * m_points[p1].z - 3.0f * m_points[p2].z + m_points[p3].z) * t3);
+        return res;
+    }
+
+    virtual BOOL ProcessCam(SCamEffectorInfo& info) {
+        if (m_points.size() < 2) return TRUE;
+
+        m_fCurrentTime += Device.fTimeDelta;
+        float t = (m_fTransitionTime > 0.001f) ? (m_fCurrentTime / m_fTransitionTime) : 1.0f;
+        clamp(t, 0.0f, 1.0f);
+
+        // Position: Fly along the spline
+        info.p = GetSplinePoint(t);
+
+        // Rotation: Where to look?
+        Fvector look_point;
+        if (m_bUseTarget) {
+            // Look at specific object or coordinate
+            look_point = m_target_pos;
+            if (m_bDynamic) {
+                CGameObject* obj = smart_cast<CGameObject*>(Level().Objects.net_Find(m_target_id));
+                if (obj) {
+                    if (smart_cast<CEntityAlive*>(obj)) {
+                        look_point = obj->Position();
+                        look_point.y += 1.2f;
+                    } else {
+                        obj->Center(look_point);
+                    }
+                }
+            }
+        } else {
+            // No target? Look forward along the flight path
+            if (t < 0.99f) {
+                look_point = GetSplinePoint(t + 0.01f);
+            } else {
+                look_point = info.p;
+                look_point.add(info.d); // Keep last direction at the very end
+            }
+        }
+
+        // Apply rotation
+        Fvector dir;
+        dir.sub(look_point, info.p).normalize_safe();
+        info.d = dir;
+
+        info.n.set(0.f, 1.f, 0.f);
+        return TRUE;
+    }
+};
+
+// Lua Wrappers
+void flight_path_clear_script() { g_flight_path.clear(); }
+void flight_path_add_point_script(Fvector pos) { g_flight_path.push_back(pos); }
+
+// Fly and look forward
+void flight_start_script(float time) {
+    if (!Actor()) return;
+    Actor()->Cameras().RemoveCamEffector((ECamEffectorType)(effCustomEffectorStartID + 3));
+    CScriptFlightEffector* eff = xr_new<CScriptFlightEffector>(time, false, 0xffff, Fvector().set(0,0,0));
+    Actor()->Cameras().AddCamEffector(eff);
+}
+
+// Fly and look at an object
+void flight_start_look_obj_script(float time, u16 id) {
+    if (!Actor()) return;
+    Actor()->Cameras().RemoveCamEffector((ECamEffectorType)(effCustomEffectorStartID + 3));
+    CScriptFlightEffector* eff = xr_new<CScriptFlightEffector>(time, true, id, Fvector().set(0,0,0));
+    Actor()->Cameras().AddCamEffector(eff);
+}
+
+// --- HUD Animations & Weapon Fire ---
+void force_play_hud_anim_script(LPCSTR anim_name) {
+    if (!Actor()) return;
+    CInventoryItem* active_item = Actor()->inventory().ActiveItem();
+    if (!active_item) {
+        Msg("! ERROR: force_play_hud_anim - No active item in Actor's hands!");
+        return;
+    }
+    CHudItem* hud_item = smart_cast<CHudItem*>(active_item);
+    if (!hud_item) return;
+    hud_item->PlayHUDMotion(shared_str(anim_name), TRUE, hud_item, hud_item->GetState());
+}
+
+void actor_fire_start_script() {
+    if (!Actor()) return;
+    CWeapon* wpn = smart_cast<CWeapon*>(Actor()->inventory().ActiveItem());
+    if (wpn) wpn->Action(kWPN_FIRE, CMD_START);
+}
+
+void actor_fire_stop_script() {
+    if (!Actor()) return;
+    CWeapon* wpn = smart_cast<CWeapon*>(Actor()->inventory().ActiveItem());
+    if (wpn) wpn->Action(kWPN_FIRE, CMD_STOP);
+}
+
+// --- 3D Sound Pool ---
+static xr_vector<ref_sound*> g_script_sounds;
+
+void play_sound_3d_script(LPCSTR path, Fvector pos, float vol, float pitch) {
+    for (auto it = g_script_sounds.begin(); it != g_script_sounds.end(); ) {
+        if (!(*it)->_feedback()) {
+            (*it)->destroy();
+            xr_delete(*it);
+            it = g_script_sounds.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    ref_sound* snd = xr_new<ref_sound>();
+    snd->create(path, st_Effect, 0); 
+    snd->play_at_pos(0, pos, 0);
+    snd->set_volume(vol);
+    snd->set_frequency(pitch); 
+    g_script_sounds.push_back(snd);
+}
+
+void stop_all_custom_sounds_script() {
+    for (auto it = g_script_sounds.begin(); it != g_script_sounds.end(); ++it) {
+        (*it)->destroy();
+        xr_delete(*it);
+    }
+    g_script_sounds.clear();
+}
 
 void show_indicators() {
     if (CurrentGameUI()) {
@@ -715,14 +976,29 @@ void CLevel::script_register(lua_State* L) {
 
         def("show_indicators", show_indicators), def("show_weapon", show_weapon),
 		
-		// Custom DoF exports
-        def("set_dof_params", &set_dof_params_script),
-		def("set_dof_by_id", &set_dof_on_object_script),
-        def("restore_dof",    &restore_dof_script),
+		// Cinematic Toolset Bindings
+        def("set_dof_script", &set_dof_params_script),
+        def("restore_dof_script", &restore_dof_script),
+        def("set_dof_obj_script", &set_dof_on_object_script),
+        
+        def("set_fov_script", &set_camera_fov_script),
+        def("restore_fov_script", &restore_camera_fov_script),
+        
+        def("run_cinematic_camera_obj", &run_cinematic_camera_obj_script),
+        def("run_cinematic_camera_pos", &run_cinematic_camera_pos_script),
+        def("restore_camera_look", &restore_camera_look_script),
 		
-		// Custom FOV exports
-        def("set_camera_fov",     &set_camera_fov_script),
-        def("restore_camera_fov", &restore_camera_fov_script),
+		def("flight_clear", &flight_path_clear_script),
+        def("flight_add_point", &flight_path_add_point_script),
+        def("flight_start", &flight_start_script),
+        def("flight_start_look_obj", &flight_start_look_obj_script),
+        
+        def("play_hud_anim", &force_play_hud_anim_script),
+        def("actor_fire_start", &actor_fire_start_script),
+        def("actor_fire_stop", &actor_fire_stop_script),
+        
+        def("play_sound_3d", &play_sound_3d_script),
+        def("stop_custom_sounds", &stop_all_custom_sounds_script),
 		
         def("add_call",
             ((void (*)(const luabind::functor<bool>&, const luabind::functor<void>&)) & add_call)),

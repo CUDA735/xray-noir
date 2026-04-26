@@ -781,6 +781,10 @@ public:
 	float get_suspicion_to_actor() const;
 	bool is_in_actor_sight() const;
     bool is_weapon_going_to_be_strapped(CScriptGameObject const* object) const;
+	// Custom Bone IK tracking
+    void force_bone_look_obj(LPCSTR bone_name, CScriptGameObject* target);
+    void force_bone_look_pos(LPCSTR bone_name, Fvector pos);
+    void restore_bone_look(LPCSTR bone_name);
 
     doors::door* m_door;
 
