@@ -480,6 +480,9 @@ public:
     }
 };
 
+u32 snd_device_id = 0;
+xr_token snd_devices_token[] = { { "OpenAL Soft", 0 }, { 0, 0 } };
+
 class CCC_soundDevice : public CCC_Token {
     typedef CCC_Token inherited;
 
@@ -489,15 +492,13 @@ public:
 
     virtual void Execute(LPCSTR args) {
         GetToken();
-        if (!tokens)
-            return;
+        if (!tokens) return;
         inherited::Execute(args);
     }
 
     virtual void Status(TStatus& S) {
         GetToken();
-        if (!tokens)
-            return;
+        if (!tokens) return;
         inherited::Status(S);
     }
 
@@ -508,11 +509,11 @@ public:
 
     virtual void Save(IWriter* F) {
         GetToken();
-        if (!tokens)
-            return;
+        if (!tokens) return;
         inherited::Save(F);
     }
 };
+// ------------------------------------------------------
 //-----------------------------------------------------------------------
 class CCC_ExclusiveMode : public IConsole_Command {
 private:

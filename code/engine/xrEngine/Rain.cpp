@@ -219,7 +219,10 @@ void CEffect_Rain::OnFrame() {
     }
 
     if (snd_Ambient._feedback()) {
-        snd_Ambient.set_volume(std::max(0.1f, factor) * hemi_factor);
+		snd_Ambient.set_position(Device.vCameraPosition);
+        float adjusted_hemi = std::max(0.0f, hemi_factor - 0.05f);
+		float smoothed_hemi = powf(adjusted_hemi, 0.5f);
+		snd_Ambient.set_volume(std::max(0.1f, factor) * smoothed_hemi);
     }
 }
 

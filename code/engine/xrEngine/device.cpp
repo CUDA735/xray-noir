@@ -379,11 +379,12 @@ void CRenderDevice::FrameMove() {
             0.9f * fPreviousFrameTime; // smooth random system activity - worst case ~7% error
         // fTimeDelta = 0.7f * fTimeDelta + 0.3f*fPreviousFrameTime;			// smooth random
         // system activity
-        if (fTimeDelta > .1f)
-            fTimeDelta = .1f; // limit to 15fps minimum
+		if (fTimeDelta > .1f)
+            fTimeDelta = .1f; // limit to 10fps minimum (нижня межа)
 
-        if (fTimeDelta <= 0.f)
-            fTimeDelta = EPS_S + EPS_S; // limit to 15fps minimum
+        // Фікс блимання партиклів при надвисокому FPS:
+        if (fTimeDelta < 0.003f) 
+            fTimeDelta = 0.003f; // limit to ~333fps maximum (верхня межа)
 
         if (Paused())
             fTimeDelta = 0.0f;

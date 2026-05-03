@@ -466,27 +466,50 @@ void restore_camera_look_script(bool bMaintainOrientation) {
 // --- Cinematic Spline Flight Effector (Catmull-Rom) ---
 static xr_vector<Fvector> g_flight_path; 
 
+// Режими напрямку погляду камери
+enum EFlightLookMode {
+    flmForward  = 0, // Вперед по сплайну
+    flmBackward = 1, // Назад
+    flmObject   = 2, // На Story ID / Object ID
+    flmCoords   = 3  // На статичні координати
+};
+
 class CScriptFlightEffector : public CEffectorCam {
     xr_vector<Fvector> m_points;
-    float m_fTransitionTime;
+    float m_fEntryTime;
+    float m_fFlightTime;
+    float m_fExitTime;
     float m_fCurrentTime;
     
-    // Look Target Variables
-    bool m_bUseTarget;
+    Fvector m_vActorStartPos;
+    Fvector m_vActorStartDir;
+
+    Fvector m_vExitStartPos;
+    Fvector m_vExitStartDir;
+    bool m_bExitCaptured;
+    bool m_bFirstUpdate;
+
+    EFlightLookMode m_eLookMode;
     u16 m_target_id;
     Fvector m_target_pos;
-    bool m_bDynamic;
 
 public:
-    CScriptFlightEffector(float time, bool use_target, u16 target_id, Fvector target_pos) 
+    CScriptFlightEffector(float entry_time, float flight_time, float exit_time, EFlightLookMode look_mode, u16 target_id, Fvector target_pos, Fvector start_pos, Fvector start_dir) 
         : CEffectorCam((ECamEffectorType)(effCustomEffectorStartID + 3), 100000.f) 
     {
-        m_fTransitionTime = time;
+        m_fEntryTime = entry_time;
+        m_fFlightTime = flight_time;
+        m_fExitTime = exit_time;
         m_fCurrentTime = 0.0f;
-        m_bUseTarget = use_target;
+        m_bExitCaptured = false;
+        m_bFirstUpdate = true; 
+        
+        m_vActorStartPos = start_pos;
+        m_vActorStartDir = start_dir;
+
+        m_eLookMode = look_mode;
         m_target_id = target_id;
         m_target_pos = target_pos;
-        m_bDynamic = (target_id != 0xffff);
         
         m_points = g_flight_path;
         g_flight_path.clear();
@@ -498,10 +521,12 @@ public:
         float t_scaled = t * max_p;
         int segment = iFloor(t_scaled);
         float local_t = t_scaled - segment;
+        
         p1 = segment;
         p2 = (p1 + 1 > max_p) ? max_p : p1 + 1;
         p0 = (p1 - 1 < 0) ? p1 : p1 - 1;
         p3 = (p2 + 1 > max_p) ? p2 : p2 + 1;
+        
         float t2 = local_t * local_t;
         float t3 = t2 * local_t;
         Fvector res;
@@ -511,72 +536,133 @@ public:
         return res;
     }
 
-    virtual BOOL ProcessCam(SCamEffectorInfo& info) {
-        if (m_points.size() < 2) return TRUE;
-
-        m_fCurrentTime += Device.fTimeDelta;
-        float t = (m_fTransitionTime > 0.001f) ? (m_fCurrentTime / m_fTransitionTime) : 1.0f;
-        clamp(t, 0.0f, 1.0f);
-
-        // Position: Fly along the spline
-        info.p = GetSplinePoint(t);
-
-        // Rotation: Where to look?
-        Fvector look_point;
-        if (m_bUseTarget) {
-            // Look at specific object or coordinate
-            look_point = m_target_pos;
-            if (m_bDynamic) {
-                CGameObject* obj = smart_cast<CGameObject*>(Level().Objects.net_Find(m_target_id));
-                if (obj) {
-                    if (smart_cast<CEntityAlive*>(obj)) {
-                        look_point = obj->Position();
-                        look_point.y += 1.2f;
-                    } else {
-                        obj->Center(look_point);
-                    }
-                }
+    Fvector GetLookDirection(float t, const Fvector& current_pos) {
+        Fvector dir;
+        if (m_eLookMode == flmObject) {
+            CGameObject* obj = smart_cast<CGameObject*>(Level().Objects.net_Find(m_target_id));
+            if (obj) {
+                Fvector look_point = obj->Position();
+                if (smart_cast<CEntityAlive*>(obj)) look_point.y += 1.2f; 
+                else obj->Center(look_point);
+                dir.sub(look_point, current_pos).normalize_safe();
+                if (dir.magnitude() > 0.0001f) return dir;
             }
-        } else {
-            // No target? Look forward along the flight path
-            if (t < 0.99f) {
-                look_point = GetSplinePoint(t + 0.01f);
+        } else if (m_eLookMode == flmCoords) {
+            dir.sub(m_target_pos, current_pos).normalize_safe();
+            if (dir.magnitude() > 0.0001f) return dir;
+        } else if (m_eLookMode == flmBackward) {
+            float t_prev = t - 0.01f;
+            if (t_prev < 0.0f) {
+                float t_next = (t + 0.01f <= 1.0f) ? (t + 0.01f) : 1.0f;
+                Fvector next_p = GetSplinePoint(t_next);
+                dir.sub(current_pos, next_p).normalize_safe();
             } else {
-                look_point = info.p;
-                look_point.add(info.d); // Keep last direction at the very end
+                Fvector prev_p = GetSplinePoint(t_prev);
+                dir.sub(prev_p, current_pos).normalize_safe();
             }
+            if (dir.magnitude() > 0.0001f) return dir;
+        }
+        
+        float t_next = t + 0.01f;
+        if (t_next > 1.0f) {
+            float t_prev = (t - 0.01f >= 0.0f) ? (t - 0.01f) : 0.0f;
+            Fvector prev_p = GetSplinePoint(t_prev);
+            dir.sub(current_pos, prev_p).normalize_safe();
+        } else {
+            Fvector next_p = GetSplinePoint(t_next);
+            dir.sub(next_p, current_pos).normalize_safe();
         }
 
-        // Apply rotation
-        Fvector dir;
-        dir.sub(look_point, info.p).normalize_safe();
-        info.d = dir;
+        if (dir.magnitude() < 0.0001f) {
+            dir = m_vActorStartDir;
+        }
+        return dir;
+    }
 
-        info.n.set(0.f, 1.f, 0.f);
-        return TRUE;
+virtual BOOL ProcessCam(SCamEffectorInfo& info) {
+        if (m_points.size() < 2) return FALSE;
+
+        // Захоплюємо справжню камеру актора з усіма ефектами дихання/розгойдування, 
+        // щоб на фініші злитися з нею ідеально, без мікро-стрибків.
+        Fvector base_p = info.p;
+        Fvector base_d = info.d;
+
+        // АНТИ-СТАТТЕР СИСТЕМА
+        float dt = Device.fTimeDelta;
+        if (m_bFirstUpdate) {
+            dt = 0.0f; 
+            m_bFirstUpdate = false;
+        } else if (dt > 0.05f) {
+            dt = 0.05f; 
+        }
+        
+        m_fCurrentTime += dt;
+
+        // ==========================================
+        // ФАЗА 1: ПЛАВНИЙ ВХІД
+        // ==========================================
+        if (m_fCurrentTime <= m_fEntryTime && m_fEntryTime > 0.001f) {
+            float t = m_fCurrentTime / m_fEntryTime;
+            clamp(t, 0.0f, 1.0f);
+            float smooth_t = t * t * (3.0f - 2.0f * t);
+
+            info.p.lerp(m_vActorStartPos, GetSplinePoint(0.0f), smooth_t);
+
+            Fvector target_dir = GetLookDirection(0.0f, info.p);
+            info.d.lerp(m_vActorStartDir, target_dir, smooth_t).normalize_safe();
+            info.n.set(0.f, 1.f, 0.f);
+            return TRUE;
+        }
+
+        // ==========================================
+        // ФАЗА 2: ПОЛІТ ПО СПЛАЙНУ
+        // ==========================================
+        if (m_fCurrentTime <= m_fEntryTime + m_fFlightTime) {
+            float flight_time_elapsed = m_fCurrentTime - m_fEntryTime;
+            float t = (m_fFlightTime > 0.001f) ? (flight_time_elapsed / m_fFlightTime) : 1.0f;
+            clamp(t, 0.0f, 1.0f);
+
+            info.p = GetSplinePoint(t);
+            info.d = GetLookDirection(t, info.p);
+            info.n.set(0.f, 1.f, 0.f);
+            return TRUE;
+        }
+
+        // ==========================================
+        // ФАЗА 3: ПЛАВНИЙ ВИХІД ДО ТІЛА АКТОРA
+        // ==========================================
+        if (m_fCurrentTime <= m_fEntryTime + m_fFlightTime + m_fExitTime && m_fExitTime > 0.001f) {
+            if (!m_bExitCaptured) {
+                m_vExitStartPos = GetSplinePoint(1.0f); 
+                m_vExitStartDir = GetLookDirection(1.0f, m_vExitStartPos); 
+                m_bExitCaptured = true;
+            }
+
+            float exit_elapsed = m_fCurrentTime - (m_fEntryTime + m_fFlightTime);
+            float t = exit_elapsed / m_fExitTime;
+            clamp(t, 0.0f, 1.0f);
+            float smooth_t = t * t * (3.0f - 2.0f * t);
+
+            // М'яко зливаємося з реальною камерою (base_p), а не статичною точкою
+            info.p.lerp(m_vExitStartPos, base_p, smooth_t);
+            info.d.lerp(m_vExitStartDir, base_d, smooth_t).normalize_safe();
+            info.n.set(0.f, 1.f, 0.f);
+            return TRUE;
+        }
+
+        return FALSE; 
     }
 };
 
-// Lua Wrappers
+// --- Оновлена обгортка для Lua ---
 void flight_path_clear_script() { g_flight_path.clear(); }
 void flight_path_add_point_script(Fvector pos) { g_flight_path.push_back(pos); }
 
-// Fly and look forward
-void flight_start_script(float time) {
+void flight_start_script(float entry, float flight, float exit, int mode, u16 id, Fvector pos, Fvector start_pos, Fvector start_dir) {
     if (!Actor()) return;
     Actor()->Cameras().RemoveCamEffector((ECamEffectorType)(effCustomEffectorStartID + 3));
-    CScriptFlightEffector* eff = xr_new<CScriptFlightEffector>(time, false, 0xffff, Fvector().set(0,0,0));
-    Actor()->Cameras().AddCamEffector(eff);
+    Actor()->Cameras().AddCamEffector(xr_new<CScriptFlightEffector>(entry, flight, exit, (EFlightLookMode)mode, id, pos, start_pos, start_dir));
 }
-
-// Fly and look at an object
-void flight_start_look_obj_script(float time, u16 id) {
-    if (!Actor()) return;
-    Actor()->Cameras().RemoveCamEffector((ECamEffectorType)(effCustomEffectorStartID + 3));
-    CScriptFlightEffector* eff = xr_new<CScriptFlightEffector>(time, true, id, Fvector().set(0,0,0));
-    Actor()->Cameras().AddCamEffector(eff);
-}
-
 // --- HUD Animations & Weapon Fire ---
 void force_play_hud_anim_script(LPCSTR anim_name) {
     if (!Actor()) return;
@@ -988,10 +1074,10 @@ void CLevel::script_register(lua_State* L) {
         def("run_cinematic_camera_pos", &run_cinematic_camera_pos_script),
         def("restore_camera_look", &restore_camera_look_script),
 		
+		
 		def("flight_clear", &flight_path_clear_script),
         def("flight_add_point", &flight_path_add_point_script),
         def("flight_start", &flight_start_script),
-        def("flight_start_look_obj", &flight_start_look_obj_script),
         
         def("play_hud_anim", &force_play_hud_anim_script),
         def("actor_fire_start", &actor_fire_start_script),
