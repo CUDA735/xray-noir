@@ -36,6 +36,7 @@ public:
     ALuint effect_slot;
     ALuint reverb_effect;
 
+    // БУФЕРИ ДЛЯ ПЛАВНОГО ПЕРЕХОДУ (LERP) 
     bool  bEFX_Initialized;
     float fTimeDelta;
     
@@ -47,7 +48,6 @@ public:
     float env_reflections_delay;
     float env_reverb_delay;
     float env_room_rolloff_factor;
-    // ==============================================================
 
 protected:
     virtual void update_listener(const Fvector& P, const Fvector& D, const Fvector& N, float dt);

@@ -35,7 +35,7 @@ BOOL CSoundRender_TargetA::_initialize() {
 
         return TRUE;
     } else {
-        Msg("! sound: OpenAL: Can't create source. Error: %s.", (LPCSTR)alGetString(error));
+        Msg("! [Noir Engine] OpenAL: Can't create source. Error: %s.", (LPCSTR)alGetString(error));
         return FALSE;
     }
 }
@@ -45,11 +45,10 @@ void CSoundRender_TargetA::_destroy() {
         alDeleteSources(1, &pSource);
     A_CHK(alDeleteBuffers(sdef_target_count, pBuffers));
 
-    // === Видалення фільтру з пам'яті ===
+    // Видалення фільтру з пам'яті 
     if (alIsFilter(filter_lowpass)) {
         alDeleteFilters(1, &filter_lowpass);
     }
-    // ===========================================
 }
 
 void CSoundRender_TargetA::_restart() {
@@ -141,8 +140,17 @@ void CSoundRender_TargetA::fill_parameters() {
         A_CHK(alSourcef(pSource, AL_PITCH, _pitch));
     }
 
-    // === EFX РЕФАКТОРИНГ: Підключення джерела до слоту реверберації та фільтрів ===
-    if (SoundRenderA->bEAX) {
+    // ФІКС ЗНИКНЕННЯ ЗВУКУ ПІСЛЯ ФРІЗІВ (BUFFER UNDERRUN)
+    ALint state;
+    alGetSourcei(pSource, AL_SOURCE_STATE, &state);
+    
+    if (state == AL_STOPPED) 
+    {
+        alSourcePlay(pSource);
+    }
+
+    // EFX РЕФАКТОРИНГ: Підключення джерела до слоту реверберації та фільтрів 
+    if (SoundRenderA->bEFX) {
         if (m_pEmitter->b2D) {
             // Музику і UI звуки не пропускаємо через реверберацію Зони
             A_CHK(alSource3i(pSource, AL_AUXILIARY_SEND_FILTER, AL_EFFECTSLOT_NULL, 0, AL_FILTER_NULL));
@@ -163,7 +171,6 @@ void CSoundRender_TargetA::fill_parameters() {
             A_CHK(alSourcei(pSource, AL_DIRECT_FILTER, filter_lowpass));
         }
     }
-    // ===============================================================================
 }
 
 void CSoundRender_TargetA::fill_block(ALuint BufferID) {

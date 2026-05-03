@@ -679,9 +679,27 @@ void CPHJoint::ReattachFirstElement(CPHElement* new_element) {
     // dJointAttach(m_joint,pFirst_element->get_body(),pSecond_element->get_body());
     // if(m_joint1)dJointAttach(m_joint1,pFirst_element->get_body(),pSecond_element->get_body());
 }
+
 void CPHJoint::SetForceAndVelocity(const float force, const float velocity, const int axis_num) {
     if (pShell && pShell->isActive())
         pShell->Enable();
+
+    // ФІКС ЗБРОЇ В ПЕТЛЯХ
+    if (bActive && eType == hinge) {
+        if (force > 5000.f && fis_zero(velocity)) {
+            
+            if (dJointGetHingeParam(m_joint, dParamCFM) != 0.0f) {
+                Msg("! [Noir Engine] Door physics locked: protection against weapon hinge exploits enabled.");
+            }
+
+            dJointSetHingeParam(m_joint, dParamCFM, 0.0f); 
+            dJointSetHingeParam(m_joint, dParamStopCFM, 0.0f);
+        } else {
+            dJointSetHingeParam(m_joint, dParamCFM, m_cfm); 
+            dJointSetHingeParam(m_joint, dParamStopCFM, m_cfm);
+        }
+    }
+
     SetForce(force, axis_num);
     SetVelocity(velocity, axis_num);
 }
@@ -996,7 +1014,8 @@ dJointGetSliderPosition(m_joint);break; case 1: ret= dJointGetAMotorAngle(m_join
                                                         };break;
                                                 default: R_ASSERT2( false, "type not supported" );
 break;
-        
+        
+
                                         }
 }
 */

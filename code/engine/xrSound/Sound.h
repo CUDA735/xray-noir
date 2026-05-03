@@ -40,7 +40,7 @@ XRSOUND_API extern int psSoundCacheSizeMB;
 // Flags
 enum {
     ss_Hardware = (1ul << 1ul), 
-    ss_EAX = (1ul << 2ul), // Залишив назву для сумісності з UI, але тепер це EFX
+    ss_EFX = (1ul << 2ul),
     ss_forcedword = u32(-1)
 };
 

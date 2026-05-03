@@ -40,8 +40,8 @@ public:
 public:
     BOOL bPresent;
     BOOL bUserEnvironment;
-    BOOL bEAX; 
-    BOOL bDeferredEAX;
+    BOOL bEFX; 
+    BOOL bDeferredEFX;
     BOOL bReady;
 
     CTimer Timer;

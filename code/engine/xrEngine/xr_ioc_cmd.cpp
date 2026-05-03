@@ -480,8 +480,9 @@ public:
     }
 };
 
-u32 snd_device_id = 0;
-xr_token snd_devices_token[] = { { "OpenAL Soft", 0 }, { 0, 0 } };
+extern __declspec(dllimport) u32 snd_device_id;
+extern __declspec(dllimport) xr_token* snd_devices_token;
+extern __declspec(dllimport) int snd_hrtf;
 
 class CCC_soundDevice : public CCC_Token {
     typedef CCC_Token inherited;
@@ -503,6 +504,7 @@ public:
     }
 
     virtual xr_token* GetToken() {
+        if (!snd_devices_token) return nullptr; // Захист від раннього виклику
         tokens = snd_devices_token;
         return inherited::GetToken();
     }
@@ -654,8 +656,10 @@ void CCC_Register() {
     CMD2(CCC_Float, "snd_volume_music", &psSoundVMusic);
     CMD1(CCC_SND_Restart, "snd_restart");
     CMD3(CCC_Mask, "snd_acceleration", &psSoundFlags, ss_Hardware);
-    CMD3(CCC_Mask, "snd_efx", &psSoundFlags, ss_EAX);
-    CMD4(CCC_Integer, "snd_targets", &psSoundTargets, 4, 32);
+	// КОМАНДИ NOIR ENGINE
+    CMD3(CCC_Mask, "snd_efx", &psSoundFlags, ss_EFX); // Керує EFX
+    CMD4(CCC_Integer, "snd_hrtf", &snd_hrtf, 0, 1);   // Керує HRTF
+    CMD4(CCC_Integer, "snd_targets", &psSoundTargets, 4, 256);
     CMD4(CCC_Integer, "snd_cache_size", &psSoundCacheSizeMB, 4, 32);
 
 #ifdef DEBUG

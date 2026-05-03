@@ -7,7 +7,7 @@
 #include "soundrender_emitter.h"
 
 int psSoundTargets = 32;
-Flags32 psSoundFlags = { ss_Hardware | ss_EAX };
+Flags32 psSoundFlags = { ss_Hardware | ss_EFX };
 float psSoundOcclusionScale = 0.5f;
 float psSoundCull = 0.01f;
 float psSoundRolloff = 0.75f;
@@ -23,8 +23,8 @@ CSound_manager_interface* Sound = 0;
 
 CSoundRender_Core::CSoundRender_Core() {
     bPresent = FALSE;
-    bEAX = FALSE;
-    bDeferredEAX = FALSE;
+    bEFX = FALSE;
+    bDeferredEFX = FALSE;
     bUserEnvironment = FALSE;
     geom_MODEL = NULL;
     geom_ENV = NULL;
@@ -54,7 +54,7 @@ CSoundRender_Core::~CSoundRender_Core() {
 }
 
 void CSoundRender_Core::_initialize(int stage) {
-    Log("* sound: EFX Extension:", bEAX ? "present" : "absent");
+    Log("* [Noir Engine] OpenAL: EFX Extension:", bEFX ? "present" : "absent");
     Timer.Start();
     env_load();
     bPresent = TRUE;
