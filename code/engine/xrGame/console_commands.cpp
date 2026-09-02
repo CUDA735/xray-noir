@@ -680,6 +680,28 @@ public:
     }
 };
 
+class CCC_ReloadLocalization : public IConsole_Command {
+public:
+    CCC_ReloadLocalization(LPCSTR N) : IConsole_Command(N) { bEmptyArgsHandled = true; }
+    virtual void Execute(LPCSTR) {
+        FS_Path* config_path = FS.get_path("$game_config$");
+        config_path->m_Flags.set(FS_Path::flNeedRescan, TRUE);
+        FS.rescan_pathes();
+        CStringTable().rescan();
+    }
+    virtual void Save(IWriter*) {}
+};
+
+class CCC_LocalizationDiagnostics : public IConsole_Command {
+public:
+    CCC_LocalizationDiagnostics(LPCSTR N) : IConsole_Command(N) { bEmptyArgsHandled = true; }
+    virtual void Execute(LPCSTR) {
+        CStringTable string_table;
+        string_table.DumpDiagnostics();
+    }
+    virtual void Save(IWriter*) {}
+};
+
 class CCC_FloatBlock : public CCC_Float {
 public:
     CCC_FloatBlock(LPCSTR N, float* V, float _min = 0, float _max = 1)
@@ -1537,6 +1559,11 @@ void CCC_RegisterCommands() {
     CMD3(CCC_Mask, "g_crouch_toggle", &psActorFlags, AF_CROUCH_TOGGLE);
     CMD1(CCC_GameDifficulty, "g_game_difficulty");
 
+    if (strstr(Core.Params, "-dev_mode")) {
+        CMD1(CCC_ReloadLocalization, "reload_localization");
+        CMD1(CCC_LocalizationDiagnostics, "localization_diagnostics");
+    }
+
     CMD3(CCC_Mask, "g_backrun", &psActorFlags, AF_RUN_BACKWARD);
 
 // alife
@@ -1879,8 +1906,6 @@ void CCC_RegisterCommands() {
 #endif
 
 #ifdef DEBUG
-    CMD4(CCC_Integer, "string_table_error_msg", &CStringTable::m_bWriteErrorsToLog, 0, 1);
-
     CMD1(CCC_DumpInfos, "dump_infos");
     CMD1(CCC_DumpTasks, "dump_tasks");
     CMD1(CCC_DumpMap, "dump_map");
