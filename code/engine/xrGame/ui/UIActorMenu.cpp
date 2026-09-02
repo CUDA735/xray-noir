@@ -267,6 +267,14 @@ EDDListType CUIActorMenu::GetListType(CUIDragDropListEx* l) {
         return iActorSlot;
     if (l == m_pInventoryPistolList)
         return iActorSlot;
+    if (m_pInventoryKnifeList && l == m_pInventoryKnifeList)
+        return iActorSlot;
+    if (m_pInventoryBinocularList && l == m_pInventoryBinocularList)
+        return iActorSlot;
+    if (m_pInventoryTorchList && l == m_pInventoryTorchList)
+        return iActorSlot;
+    if (m_pInventoryExtraPistolList && l == m_pInventoryExtraPistolList)
+        return iActorSlot;
     if (l == m_pInventoryOutfitList)
         return iActorSlot;
     if (l == m_pInventoryHelmetList)
@@ -715,6 +723,14 @@ void CUIActorMenu::ClearAllLists() {
     m_pInventoryDetectorList->ClearAll(true);
     m_pInventoryPistolList->ClearAll(true);
     m_pInventoryAutomaticList->ClearAll(true);
+    if (m_pInventoryKnifeList)
+        m_pInventoryKnifeList->ClearAll(true);
+    if (m_pInventoryBinocularList)
+        m_pInventoryBinocularList->ClearAll(true);
+    if (m_pInventoryTorchList)
+        m_pInventoryTorchList->ClearAll(true);
+    if (m_pInventoryExtraPistolList)
+        m_pInventoryExtraPistolList->ClearAll(true);
     m_pQuickSlot->ClearAll(true);
 
     m_pTradeActorBagList->ClearAll(true);
@@ -776,6 +792,12 @@ bool CUIActorMenu::CanSetItemToList(PIItem item, CUIDragDropListEx* l, u16& ret_
 
     if (item_slot == INV_SLOT_2 && l == m_pInventoryAutomaticList) {
         ret_slot = INV_SLOT_3;
+        return true;
+    }
+
+    if (item_slot == INV_SLOT_2 && m_pInventoryExtraPistolList &&
+        l == m_pInventoryExtraPistolList) {
+        ret_slot = EXTRA_PISTOL_SLOT;
         return true;
     }
 
