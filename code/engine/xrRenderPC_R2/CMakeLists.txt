@@ -352,6 +352,7 @@ set(SHADING_TEMPLATES blender_bloom_build.h
                       ../xrRenderCommon/Blender_Particle.h
                       blender_ssao.h
                       ../xrRenderCommon/uber_deffer.h
+                      ../xrRenderCommon/rendertarget_raindrops.cpp
                       blender_bloom_build.cpp
                       ../xrRenderCommon/Blender_BmmD.cpp
                       blender_combine.cpp

@@ -417,6 +417,7 @@ set(SHADING_TEMPLATES blender_bloom_build.h
                       dx11HDAOCSBlender.h
                       dx11MinMaxSMBlender.h
                       ../xrRenderCommon/uber_deffer.h
+                      ../xrRenderCommon/rendertarget_raindrops.cpp
                       blender_bloom_build.cpp
                       ../xrRenderCommon/Blender_BmmD.cpp
                       blender_combine.cpp
