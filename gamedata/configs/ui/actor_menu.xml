@@ -185,16 +185,16 @@
 
 	<dragdrop_knife x="370" y="447" width="41" height="33"
 		cell_width="41" cell_height="33" rows_num="1" cols_num="1"
-		custom_placement="0" a="0" virtual_cells="1" vc_vert_align="c" vc_horiz_align="c"/>
+		custom_placement="0" a="0" virtual_cells="1" single_slot="1" vc_vert_align="c" vc_horiz_align="c"/>
 	<dragdrop_binocular x="451" y="447" width="41" height="33"
 		cell_width="41" cell_height="33" rows_num="1" cols_num="1"
-		custom_placement="0" a="0" virtual_cells="1" vc_vert_align="c" vc_horiz_align="c"/>
+		custom_placement="0" a="0" virtual_cells="1" single_slot="1" vc_vert_align="c" vc_horiz_align="c"/>
 	<dragdrop_torch x="532" y="447" width="41" height="33"
 		cell_width="41" cell_height="33" rows_num="1" cols_num="1"
-		custom_placement="0" a="0" virtual_cells="1" vc_vert_align="c" vc_horiz_align="c"/>
+		custom_placement="0" a="0" virtual_cells="1" single_slot="1" vc_vert_align="c" vc_horiz_align="c"/>
 	<dragdrop_pistol_extra x="613" y="447" width="41" height="33"
 		cell_width="41" cell_height="33" rows_num="1" cols_num="1"
-		custom_placement="0" a="0" virtual_cells="1" vc_vert_align="c" vc_horiz_align="c"/>
+		custom_placement="0" a="0" virtual_cells="1" single_slot="1" vc_vert_align="c" vc_horiz_align="c"/>
 
 
   <dragdrop_trash x="0" y="0" width="340" height="768"
