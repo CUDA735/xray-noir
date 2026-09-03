@@ -13,6 +13,8 @@
 
 #include "../Weapon.h"
 #include "../WeaponMagazinedWGrenade.h"
+#include "../WeaponKnife.h"
+#include "../WeaponBinoculars.h"
 #include "../WeaponAmmo.h"
 #include "../Silencer.h"
 #include "../Scope.h"
@@ -267,6 +269,14 @@ EDDListType CUIActorMenu::GetListType(CUIDragDropListEx* l) {
         return iActorSlot;
     if (l == m_pInventoryPistolList)
         return iActorSlot;
+    if (m_pInventoryKnifeList && l == m_pInventoryKnifeList)
+        return iActorSlot;
+    if (m_pInventoryBinocularList && l == m_pInventoryBinocularList)
+        return iActorSlot;
+    if (m_pInventoryTorchList && l == m_pInventoryTorchList)
+        return iActorSlot;
+    if (m_pInventoryExtraPistolList && l == m_pInventoryExtraPistolList)
+        return iActorSlot;
     if (l == m_pInventoryOutfitList)
         return iActorSlot;
     if (l == m_pInventoryHelmetList)
@@ -431,6 +441,8 @@ void CUIActorMenu::clear_highlight_lists() {
     m_HelmetSlotHighlight->Show(false);
     m_OutfitSlotHighlight->Show(false);
     m_DetectorSlotHighlight->Show(false);
+    m_KnifeSlotHighlight->Show(false);
+    m_BinocularSlotHighlight->Show(false);
     for (u8 i = 0; i < 4; i++)
         m_QuickSlotsHighlight[i]->Show(false);
     for (u8 i = 0; i < e_af_count; i++)
@@ -465,6 +477,8 @@ void CUIActorMenu::highlight_item_slot(CUICellItem* cell_item) {
     if (CUIDragDropListEx::m_drag_item)
         return;
 
+    CWeaponKnife* knife = smart_cast<CWeaponKnife*>(item);
+    CWeaponBinoculars* binocular = smart_cast<CWeaponBinoculars*>(item);
     CWeapon* weapon = smart_cast<CWeapon*>(item);
     CHelmet* helmet = smart_cast<CHelmet*>(item);
     CCustomOutfit* outfit = smart_cast<CCustomOutfit*>(item);
@@ -472,6 +486,14 @@ void CUIActorMenu::highlight_item_slot(CUICellItem* cell_item) {
     CEatableItem* eatable = smart_cast<CEatableItem*>(item);
     CArtefact* artefact = smart_cast<CArtefact*>(item);
 
+    if (knife) {
+        m_KnifeSlotHighlight->Show(true);
+        return;
+    }
+    if (binocular) {
+        m_BinocularSlotHighlight->Show(true);
+        return;
+    }
     if (weapon) {
         m_InvSlot2Highlight->Show(true);
         m_InvSlot3Highlight->Show(true);
@@ -715,6 +737,14 @@ void CUIActorMenu::ClearAllLists() {
     m_pInventoryDetectorList->ClearAll(true);
     m_pInventoryPistolList->ClearAll(true);
     m_pInventoryAutomaticList->ClearAll(true);
+    if (m_pInventoryKnifeList)
+        m_pInventoryKnifeList->ClearAll(true);
+    if (m_pInventoryBinocularList)
+        m_pInventoryBinocularList->ClearAll(true);
+    if (m_pInventoryTorchList)
+        m_pInventoryTorchList->ClearAll(true);
+    if (m_pInventoryExtraPistolList)
+        m_pInventoryExtraPistolList->ClearAll(true);
     m_pQuickSlot->ClearAll(true);
 
     m_pTradeActorBagList->ClearAll(true);
@@ -776,6 +806,12 @@ bool CUIActorMenu::CanSetItemToList(PIItem item, CUIDragDropListEx* l, u16& ret_
 
     if (item_slot == INV_SLOT_2 && l == m_pInventoryAutomaticList) {
         ret_slot = INV_SLOT_3;
+        return true;
+    }
+
+    if (item_slot == INV_SLOT_2 && m_pInventoryExtraPistolList &&
+        l == m_pInventoryExtraPistolList) {
+        ret_slot = EXTRA_PISTOL_SLOT;
         return true;
     }
 

@@ -20,6 +20,7 @@
 #include "clsid_game.h"
 #include "static_cast_checked.hpp"
 #include "player_hud.h"
+#include "NoirInventorySlots.h"
 
 using namespace InventoryUtilities;
 
@@ -44,6 +45,8 @@ CInventory::CInventory() {
     m_fMaxWeight = pSettings->r_float("inventory", "max_weight");
 
     u32 sz = pSettings->r_s32("inventory", "slots_count");
+    if (sz < LastSlot())
+        sz = LastSlot();
     m_slots.resize(sz + 1); // first is [1]
 
     m_iActiveSlot = NO_ACTIVE_SLOT;
@@ -53,10 +56,12 @@ CInventory::CInventory() {
     string256 temp;
     for (u16 i = FirstSlot(); i <= LastSlot(); ++i) {
         xr_sprintf(temp, "slot_persistent_%d", i);
-        m_slots[i].m_bPersistent = !!pSettings->r_bool("inventory", temp);
+        if (pSettings->line_exist("inventory", temp))
+            m_slots[i].m_bPersistent = !!pSettings->r_bool("inventory", temp);
 
         xr_sprintf(temp, "slot_active_%d", i);
-        m_slots[i].m_bAct = !!pSettings->r_bool("inventory", temp);
+        if (pSettings->line_exist("inventory", temp))
+            m_slots[i].m_bAct = !!pSettings->r_bool("inventory", temp);
     };
 
     m_bSlotsUseful = true;
@@ -75,6 +80,17 @@ CInventory::CInventory() {
 }
 
 CInventory::~CInventory() {}
+
+bool CInventory::SlotIsPersistent(u16 slot_id) const {
+    VERIFY(slot_id >= FirstSlot() && slot_id <= LastSlot());
+
+    // Keep the original persistent-slot behavior for NPC inventories. The optional
+    // slots are a player inventory feature only.
+    if (smart_cast<CActor*>(m_pOwner) && NoirInventorySlots::IsSlotEnabled(slot_id))
+        return false;
+
+    return m_slots[slot_id].m_bPersistent;
+}
 
 void CInventory::Clear() {
     m_all.clear();
@@ -261,6 +277,16 @@ bool CInventory::DropItem(CGameObject* pObj, bool just_before_destroy, bool dont
 //положить вещь в слот
 bool CInventory::Slot(u16 slot_id, PIItem pIItem, bool bNotActivate, bool strict_placement) {
     VERIFY(pIItem);
+
+    if (slot_id < FirstSlot() || slot_id > LastSlot())
+        return false;
+
+    // Also check strict placement so an older save cannot restore an item into a
+    // disabled or incompatible optional slot.
+    if (slot_id == EXTRA_PISTOL_SLOT &&
+        (!smart_cast<CActor*>(m_pOwner) || !NoirInventorySlots::ExtraPistolEnabled() ||
+         pIItem->BaseSlot() != INV_SLOT_2))
+        return false;
 
     if (ItemFromSlot(slot_id) == pIItem)
         return false;
@@ -1014,7 +1040,15 @@ bool CInventory::InRuck(const CInventoryItem* pIItem) const {
 }
 
 bool CInventory::CanPutInSlot(PIItem pIItem, u16 slot_id) const {
+    if (!pIItem || slot_id < FirstSlot() || slot_id > LastSlot())
+        return false;
+
     if (!m_bSlotsUseful)
+        return false;
+
+    if (slot_id == EXTRA_PISTOL_SLOT &&
+        (!smart_cast<CActor*>(m_pOwner) || !NoirInventorySlots::ExtraPistolEnabled() ||
+         pIItem->BaseSlot() != INV_SLOT_2))
         return false;
 
     if (!GetOwner()->CanPutInSlot(pIItem, slot_id))

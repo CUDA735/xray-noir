@@ -17,7 +17,8 @@ enum {
     TORCH_SLOT,     // torch
     ARTEFACT_SLOT,  // artefact
     HELMET_SLOT,
-    LAST_SLOT = HELMET_SLOT
+    EXTRA_PISTOL_SLOT, // optional third weapon slot; accepts items with base slot INV_SLOT_2
+    LAST_SLOT = EXTRA_PISTOL_SLOT
 };
 
 #define RUCK_HEIGHT 280
