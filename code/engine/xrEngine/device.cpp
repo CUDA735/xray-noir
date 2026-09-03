@@ -382,9 +382,12 @@ void CRenderDevice::FrameMove() {
 		if (fTimeDelta > .1f)
             fTimeDelta = .1f; // limit to 10fps minimum (нижня межа)
 
-        // Фікс блимання партиклів при надвисокому FPS:
-        if (fTimeDelta < 0.003f) 
-            fTimeDelta = 0.003f; // limit to ~333fps maximum (верхня межа)
+        // Never clamp a valid frame delta up to a minimum value. Doing so makes
+        // simulation time run faster than real time whenever FPS exceeds the
+        // corresponding limit (for example, 0.003f starts speeding up above
+        // roughly 333 FPS).
+        if (fTimeDelta <= 0.f)
+            fTimeDelta = EPS_S + EPS_S;
 
         if (Paused())
             fTimeDelta = 0.0f;
