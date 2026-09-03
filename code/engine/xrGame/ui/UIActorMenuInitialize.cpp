@@ -138,16 +138,12 @@ void CUIActorMenu::Construct() {
 
     if (NoirInventorySlots::KnifeEnabled())
         m_KnifeSlotHighlight = UIHelper::CreateStatic(uiXml, "knife_slot_highlight", this);
-        m_KnifeSlotHighlight->Show(false);
     if (NoirInventorySlots::BinocularEnabled())
         m_BinocularSlotHighlight = UIHelper::CreateStatic(uiXml, "binocular_slot_highlight", this);
-        m_BinocularSlotHighlight->Show(false);
     if (NoirInventorySlots::TorchEnabled())
         m_TorchSlotHighlight = UIHelper::CreateStatic(uiXml, "torch_slot_highlight", this);
-        m_TorchSlotHighlight->Show(false);
     if (NoirInventorySlots::ExtraPistolEnabled())
         m_PistolExtraSlotHighlight = UIHelper::CreateStatic(uiXml, "pistol_extra_slot_highlight", this);
-        m_PistolExtraSlotHighlight->Show(false);
 
     m_pInventoryBagList = UIHelper::CreateDragDropListEx(uiXml, "dragdrop_bag", this);
     m_pInventoryBeltList = UIHelper::CreateDragDropListEx(uiXml, "dragdrop_belt", this);
