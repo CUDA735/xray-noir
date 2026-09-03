@@ -13,6 +13,8 @@
 
 #include "../Weapon.h"
 #include "../WeaponMagazinedWGrenade.h"
+#include "../WeaponKnife.h"
+#include "../WeaponBinoculars.h"
 #include "../WeaponAmmo.h"
 #include "../Silencer.h"
 #include "../Scope.h"
@@ -439,6 +441,8 @@ void CUIActorMenu::clear_highlight_lists() {
     m_HelmetSlotHighlight->Show(false);
     m_OutfitSlotHighlight->Show(false);
     m_DetectorSlotHighlight->Show(false);
+    m_KnifeSlotHighlight->Show(false);
+    m_BinocularSlotHighlight->Show(false);
     for (u8 i = 0; i < 4; i++)
         m_QuickSlotsHighlight[i]->Show(false);
     for (u8 i = 0; i < e_af_count; i++)
@@ -473,6 +477,8 @@ void CUIActorMenu::highlight_item_slot(CUICellItem* cell_item) {
     if (CUIDragDropListEx::m_drag_item)
         return;
 
+    CWeaponKnife* knife = smart_cast<CWeaponKnife*>(item);
+    CWeaponBinoculars* binocular = smart_cast<CWeaponBinoculars*>(item);
     CWeapon* weapon = smart_cast<CWeapon*>(item);
     CHelmet* helmet = smart_cast<CHelmet*>(item);
     CCustomOutfit* outfit = smart_cast<CCustomOutfit*>(item);
@@ -480,6 +486,14 @@ void CUIActorMenu::highlight_item_slot(CUICellItem* cell_item) {
     CEatableItem* eatable = smart_cast<CEatableItem*>(item);
     CArtefact* artefact = smart_cast<CArtefact*>(item);
 
+    if (knife) {
+        m_KnifeSlotHighlight->Show(true);
+        return;
+    }
+    if (binocular) {
+        m_BinocularSlotHighlight->Show(true);
+        return;
+    }
     if (weapon) {
         m_InvSlot2Highlight->Show(true);
         m_InvSlot3Highlight->Show(true);

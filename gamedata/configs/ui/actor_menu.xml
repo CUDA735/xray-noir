@@ -18,24 +18,60 @@
 	</left_background>
 
 	<actor_ch_info x="694" y="10" width="321" height="89">
-		<name_static x="10" y="18" width="140" height="16">
+		<name_static x="5" y="-3" width="112" height="16">
 			<text align="l" font="letterica18" color="ui_2"/>
 		</name_static>
-		<community_static x="10" y="36" width="140" height="14">
-			<text align="l" font="letterica16" color="ui_3"/>
+		<rank_caption x="5" y="23" width="112" height="14">
+			<text align="l" font="letterica16" color="ui_3">ui_st_rank</text>
+		</rank_caption>
+		<rank_static x="76" y="23" width="112" height="14">
+			<text align="r" font="letterica16" color="ui_3"/>
+		</rank_static>
+		<community_caption x="5" y="12" width="112" height="14">
+			<text align="l" font="letterica16" color="ui_3">ui_st_community</text>
+		</community_caption>
+		<community_static x="76" y="12" width="112" height="14">
+			<text align="r" font="letterica16" color="ui_3"/>
 		</community_static>
+		<reputation_caption x="5" y="34" width="112" height="14">
+			<text align="l" font="letterica16" color="ui_3">ui_st_reputation</text>
+		</reputation_caption>
+		<reputation_static x="76" y="34" width="112" height="14">
+			<text align="r" font="letterica16" color="ui_3"/>
+		</reputation_static>
 		<icon x="197" y="1" width="123" height="87" stretch="1">
 			<deadbody r="255" g="160" b="160" a="205"/>
 		</icon>
 	</actor_ch_info>
 
 	<partner_ch_info x="11" y="10" width="321" height="89">
-	    <name_static x="10" y="18" width="140" height="16">
-	    	<text align="l" font="letterica18" color="ui_2"/>
-	    </name_static>
-	    <community_static x="10" y="36" width="140" height="14">
-		    <text align="l" font="letterica16" color="ui_3"/>
-	    </community_static>
+		<name_static x="5" y="-3" width="112" height="16">
+			<text align="l" font="letterica18" color="ui_2"/>
+		</name_static>
+		<rank_caption x="5" y="23" width="112" height="14">
+			<text align="l" font="letterica16" color="ui_3">ui_st_rank</text>
+		</rank_caption>
+		<rank_static x="76" y="23" width="112" height="14">
+			<text align="r" font="letterica16" color="ui_3"/>
+		</rank_static>
+		<community_caption x="5" y="12" width="112" height="14">
+			<text align="l" font="letterica16" color="ui_3">ui_st_community</text>
+		</community_caption>
+		<community_static x="76" y="12" width="112" height="14">
+			<text align="r" font="letterica16" color="ui_3"/>
+		</community_static>
+		<reputation_caption x="5" y="34" width="112" height="14">
+			<text align="l" font="letterica16" color="ui_3">ui_st_reputation</text>
+		</reputation_caption>
+		<reputation_static x="76" y="34" width="112" height="14">
+			<text align="r" font="letterica16" color="ui_3"/>
+		</reputation_static>
+		<relation_caption x="5" y="45" width="112" height="14">
+			<text align="l" font="letterica16" color="ui_3">ui_st_relation</text>
+		</relation_caption>
+		<relation_static x="76" y="45" width="112" height="14">
+			<text align="r" font="letterica16" color="ui_3"/>
+		</relation_static>
 	    <icon x="197" y="1" width="123" height="87" stretch="1">
 		    <deadbody r="255" g="160" b="160" a="205"/>
 	    </icon>
@@ -49,10 +85,10 @@
 		<text align="r" font="graffiti22"/>
 	</partner_money_static>
 
-	<inv_slot2_highlight x="359" y="17" width="82" height="353" stretch="1">
+	<inv_slot2_highlight x="356" y="159" width="86" height="213" stretch="1">
 		<texture>ui_inGame2_weapon_highlighter</texture>
 	</inv_slot2_highlight>
-	<inv_slot3_highlight x="583" y="17" width="82" height="353" stretch="1">
+	<inv_slot3_highlight x="580" y="159" width="86" height="213" stretch="1">
 		<texture>ui_inGame2_weapon_highlighter</texture>
 	</inv_slot3_highlight>
 	<helmet_slot_highlight x="463" y="17" width="96" height="98" stretch="1">
@@ -116,6 +152,14 @@
 		<middle_color r="255" g="255" b="118"/>
 		<max_color r="107" g="207" b="119"/>
     </progess_bar_helmet>
+    <progess_bar_backpack x="593" y="136" width="58" height="5" horz="1" min="0" max="1" pos="0">
+        <progress>
+            <texture r="142" g="149" b="149">ui_inGame2_inventory_status_bar</texture>
+        </progress>
+		<min_color r="196" g="18" b="18"/>
+		<middle_color r="255" g="255" b="118"/>
+		<max_color r="107" g="207" b="119"/>
+    </progess_bar_backpack>
 
 	<actor_weight_caption x="810" y="736" width="71" height="16">
 		<text align="r" font="letterica16" color="ui_3">ui_total_weight</text>
@@ -169,31 +213,41 @@
 		<texture >ui_inGame2_helmet_blocker</texture>
 	</helmet_over>
 
-	<!-- Optional modular equipment slots. They are instantiated only when enabled. -->
-	<knife_slot_background x="370" y="447" width="41" height="33" stretch="1">
-		<texture>ui_inGame2_quick_item_highlighter</texture>
-	</knife_slot_background>
-	<binocular_slot_background x="451" y="447" width="41" height="33" stretch="1">
-		<texture>ui_inGame2_quick_item_highlighter</texture>
-	</binocular_slot_background>
-	<torch_slot_background x="532" y="447" width="41" height="33" stretch="1">
-		<texture>ui_inGame2_quick_item_highlighter</texture>
-	</torch_slot_background>
-	<pistol_extra_slot_background x="613" y="447" width="41" height="33" stretch="1">
-		<texture>ui_inGame2_quick_item_highlighter</texture>
-	</pistol_extra_slot_background>
+	<backpack_over x="579" y="14" width="85" height="136" stretch="1">
+		<texture >ui_inGame2_backpack_blocker</texture>
+	</backpack_over>
 
-	<dragdrop_knife x="370" y="447" width="41" height="33"
-		cell_width="41" cell_height="33" rows_num="1" cols_num="1"
+	<!-- Optional modular equipment slots. They are instantiated only when enabled. -->
+	<knife_slot_highlight x="355" y="18" width="88" height="58" stretch="1">
+		<texture>ui_inGame2_quick_item_highlighter</texture>
+	</knife_slot_highlight>
+	<binocular_slot_highlight x="355" y="88" width="88" height="58" stretch="1">
+		<texture>ui_inGame2_quick_item_highlighter</texture>
+	</binocular_slot_highlight>
+	<backpack_slot_highlight x="579" y="14" width="91" height="130" stretch="1">
+		<texture>ui_inGame2_quick_item_highlighter</texture>
+	</backpack_slot_highlight>
+	<torch_slot_highlight x="532" y="447" width="41" height="33" stretch="1">
+		<texture>ui_inGame2_quick_item_highlighter</texture>
+	</torch_slot_highlight>
+	<pistol_extra_slot_highlight x="613" y="447" width="41" height="33" stretch="1">
+		<texture>ui_inGame2_quick_item_highlighter</texture>
+	</pistol_extra_slot_highlight>
+
+	<dragdrop_knife x="355" y="18" width="88" height="58"
+		cell_width="41" cell_height="41" rows_num="2" cols_num="2"
 		custom_placement="0" a="0" virtual_cells="1" single_slot="1" vc_vert_align="c" vc_horiz_align="c"/>
-	<dragdrop_binocular x="451" y="447" width="41" height="33"
-		cell_width="41" cell_height="33" rows_num="1" cols_num="1"
+	<dragdrop_binocular x="356" y="88" width="88" height="56"
+		cell_width="41" cell_height="41" rows_num="2" cols_num="2"
+		custom_placement="0" a="0" virtual_cells="1" single_slot="1" vc_vert_align="c" vc_horiz_align="c"/>
+	<dragdrop_backpack x="579" y="14" width="91" height="130"
+		cell_width="41" cell_height="41" rows_num="3" cols_num="2"
 		custom_placement="0" a="0" virtual_cells="1" single_slot="1" vc_vert_align="c" vc_horiz_align="c"/>
 	<dragdrop_torch x="532" y="447" width="41" height="33"
-		cell_width="41" cell_height="33" rows_num="1" cols_num="1"
+		cell_width="41" cell_height="33" rows_num="2" cols_num="1"
 		custom_placement="0" a="0" virtual_cells="1" single_slot="1" vc_vert_align="c" vc_horiz_align="c"/>
 	<dragdrop_pistol_extra x="613" y="447" width="41" height="33"
-		cell_width="41" cell_height="33" rows_num="1" cols_num="1"
+		cell_width="41" cell_height="33" rows_num="2" cols_num="1"
 		custom_placement="0" a="0" virtual_cells="1" single_slot="1" vc_vert_align="c" vc_horiz_align="c"/>
 
 
@@ -223,13 +277,13 @@
 		custom_placement="0" a="0" virtual_cells="1" vc_vert_align="c"
 		vc_horiz_align="c"/>
 
-	<dragdrop_pistol x="352" y="14" width="93" height="368"
-		cell_width="41" cell_height="41" rows_num="6" cols_num="2"
+	<dragdrop_pistol x="355" y="158" width="87" height="215"
+		cell_width="33" cell_height="33" rows_num="6" cols_num="2"
 		custom_placement="0" vertical_placement="1" a="0"
 		virtual_cells="1" vc_vert_align="c" vc_horiz_align="c"/>
 
-	<dragdrop_automatic x="576" y="14" width="93" height="370"
-		cell_width="41" cell_height="41" rows_num="6" cols_num="2"
+	<dragdrop_automatic x="580" y="158" width="88" height="214"
+		cell_width="33" cell_height="33" rows_num="6" cols_num="2"
 		custom_placement="0" vertical_placement="1" a="0"
 		virtual_cells="1" vc_vert_align="c" vc_horiz_align="c" />
 

@@ -117,6 +117,10 @@ protected:
     CUIStatic* m_HelmetSlotHighlight;
     CUIStatic* m_OutfitSlotHighlight;
     CUIStatic* m_DetectorSlotHighlight;
+    CUIStatic* m_KnifeSlotHighlight;
+    CUIStatic* m_BinocularSlotHighlight;
+    CUIStatic* m_TorchSlotHighlight;
+    CUIStatic* m_PistolExtraSlotHighlight;
     CUIStatic* m_QuickSlotsHighlight[4];
     CUIStatic* m_ArtefactSlotsHighlight[e_af_count];
 
