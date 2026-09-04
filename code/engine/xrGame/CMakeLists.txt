@@ -2826,8 +2826,10 @@ set(AI_ACOMPONENTS_MOVEMENTMANAGER_PATHMANAGERS_GAMEPATHMANAGER game_path_manage
                                                                 game_path_manager_inline.h)
 
 set(CORE_CLIENT_OBJECTS_INVENTORY Inventory.h
+                                  NoirInventorySlots.h
                                   ../xrServerEntities/inventory_space.h
                                   Inventory.cpp
+                                  NoirInventorySlots.cpp
                                   inventory_quickswitch.cpp)
 
 set(AI_ALIFE_INVENTORY_UPGRADE inventory_upgrade_manager.h
@@ -3895,6 +3897,7 @@ set_source_files_properties(HelicopterMovementManager.cpp PROPERTIES COMPILE_FLA
 set_source_files_properties(hit_memory_manager.cpp PROPERTIES COMPILE_FLAGS "/Yupch_script.h /Fp\"${SCRIPT_PCH_FILE}\"")
 set_source_files_properties(InfoPortion.cpp PROPERTIES COMPILE_FLAGS "/Yupch_script.h /Fp\"${SCRIPT_PCH_FILE}\"")
 set_source_files_properties(Inventory.cpp PROPERTIES COMPILE_FLAGS "/Yupch_script.h /Fp\"${SCRIPT_PCH_FILE}\"")
+set_source_files_properties(NoirInventorySlots.cpp PROPERTIES COMPILE_FLAGS "/Yupch_script.h /Fp\"${SCRIPT_PCH_FILE}\"")
 set_source_files_properties(inventory_item.cpp PROPERTIES COMPILE_FLAGS "/Yupch_script.h /Fp\"${SCRIPT_PCH_FILE}\"")
 set_source_files_properties(inventory_item_object.cpp PROPERTIES COMPILE_FLAGS "/Yupch_script.h /Fp\"${SCRIPT_PCH_FILE}\"")
 set_source_files_properties(inventory_item_upgrade.cpp PROPERTIES COMPILE_FLAGS "/Yupch_script.h /Fp\"${SCRIPT_PCH_FILE}\"")

@@ -92,6 +92,10 @@ protected:
     CUIDragDropListEx* m_pInventoryBeltList;
     CUIDragDropListEx* m_pInventoryPistolList;
     CUIDragDropListEx* m_pInventoryAutomaticList;
+    CUIDragDropListEx* m_pInventoryKnifeList;
+    CUIDragDropListEx* m_pInventoryBinocularList;
+    CUIDragDropListEx* m_pInventoryTorchList;
+    CUIDragDropListEx* m_pInventoryExtraPistolList;
     CUIDragDropListEx* m_pInventoryOutfitList;
     CUIDragDropListEx* m_pInventoryHelmetList;
     CUIDragDropListEx* m_pInventoryDetectorList;
@@ -113,6 +117,10 @@ protected:
     CUIStatic* m_HelmetSlotHighlight;
     CUIStatic* m_OutfitSlotHighlight;
     CUIStatic* m_DetectorSlotHighlight;
+    CUIStatic* m_KnifeSlotHighlight;
+    CUIStatic* m_BinocularSlotHighlight;
+    CUIStatic* m_TorchSlotHighlight;
+    CUIStatic* m_PistolExtraSlotHighlight;
     CUIStatic* m_QuickSlotsHighlight[4];
     CUIStatic* m_ArtefactSlotsHighlight[e_af_count];
 

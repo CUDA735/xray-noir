@@ -54,7 +54,8 @@ void CActor::IR_OnKeyboardPress(int cmd) {
             return;
 
         u16 slot = inventory().GetActiveSlot();
-        if (inventory().ActiveItem() && (slot == INV_SLOT_3 || slot == INV_SLOT_2))
+        if (inventory().ActiveItem() &&
+            (slot == INV_SLOT_3 || slot == INV_SLOT_2 || slot == EXTRA_PISTOL_SLOT))
             mstate_wishful &= ~mcSprint;
         //-----------------------------
         if (OnServer()) {
@@ -461,11 +462,12 @@ BOOL CActor::HUDview() const {
 }
 
 static u16 SlotsToCheck[] = {
-    KNIFE_SLOT,    // 0
-    INV_SLOT_2,    // 1
-    INV_SLOT_3,    // 2
-    GRENADE_SLOT,  // 3
-    ARTEFACT_SLOT, // 10
+    KNIFE_SLOT,         // 0
+    INV_SLOT_2,         // 1
+    INV_SLOT_3,         // 2
+    EXTRA_PISTOL_SLOT,  // optional third weapon slot
+    GRENADE_SLOT,       // 3
+    ARTEFACT_SLOT,      // 10
 };
 
 void CActor::OnNextWeaponSlot() {
@@ -489,10 +491,14 @@ void CActor::OnNextWeaponSlot() {
 
     for (u32 i = CurSlot + 1; i < NumSlotsToCheck; i++) {
         if (inventory().ItemFromSlot(SlotsToCheck[i])) {
-            if (SlotsToCheck[i] == ARTEFACT_SLOT) {
+            const u16 slot = SlotsToCheck[i];
+            if (slot == ARTEFACT_SLOT) {
                 IR_OnKeyboardPress(kARTEFACT);
-            } else
-                IR_OnKeyboardPress(kWPN_1 + i);
+            } else if (slot == EXTRA_PISTOL_SLOT) {
+                inventory().ActiveWeapon(EXTRA_PISTOL_SLOT);
+            } else {
+                IR_OnKeyboardPress(kWPN_1 + slot - KNIFE_SLOT);
+            }
             return;
         }
     }
@@ -519,10 +525,14 @@ void CActor::OnPrevWeaponSlot() {
 
     for (s32 i = s32(CurSlot - 1); i >= 0; i--) {
         if (inventory().ItemFromSlot(SlotsToCheck[i])) {
-            if (SlotsToCheck[i] == ARTEFACT_SLOT) {
+            const u16 slot = SlotsToCheck[i];
+            if (slot == ARTEFACT_SLOT) {
                 IR_OnKeyboardPress(kARTEFACT);
-            } else
-                IR_OnKeyboardPress(kWPN_1 + i);
+            } else if (slot == EXTRA_PISTOL_SLOT) {
+                inventory().ActiveWeapon(EXTRA_PISTOL_SLOT);
+            } else {
+                IR_OnKeyboardPress(kWPN_1 + slot - KNIFE_SLOT);
+            }
             return;
         }
     }
@@ -560,11 +570,15 @@ void CActor::set_input_external_handler(CActorInputHandler* handler) {
 void CActor::SwitchNightVision() {
     CWeapon* wpn1 = NULL;
     CWeapon* wpn2 = NULL;
+    CWeapon* wpn_extra = NULL;
     if (inventory().ItemFromSlot(INV_SLOT_2))
         wpn1 = smart_cast<CWeapon*>(inventory().ItemFromSlot(INV_SLOT_2));
 
     if (inventory().ItemFromSlot(INV_SLOT_3))
         wpn2 = smart_cast<CWeapon*>(inventory().ItemFromSlot(INV_SLOT_3));
+
+    if (inventory().ItemFromSlot(EXTRA_PISTOL_SLOT))
+        wpn_extra = smart_cast<CWeapon*>(inventory().ItemFromSlot(EXTRA_PISTOL_SLOT));
 
     xr_vector<CAttachableItem*> const& all = CAttachmentOwner::attached_objects();
     xr_vector<CAttachableItem*>::const_iterator it = all.begin();
@@ -576,6 +590,9 @@ void CActor::SwitchNightVision() {
                 return;
 
             if (wpn2 && wpn2->IsZoomed())
+                return;
+
+            if (wpn_extra && wpn_extra->IsZoomed())
                 return;
 
             torch->SwitchNightVision();
