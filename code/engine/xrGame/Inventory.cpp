@@ -288,6 +288,9 @@ bool CInventory::Slot(u16 slot_id, PIItem pIItem, bool bNotActivate, bool strict
          pIItem->BaseSlot() != INV_SLOT_2))
         return false;
 
+    if (slot_id == BACKPACK_SLOT && !NoirInventorySlots::BackpackEnabled())
+        return false;
+
     if (ItemFromSlot(slot_id) == pIItem)
         return false;
 
@@ -1060,9 +1063,12 @@ bool CInventory::CanPutInSlot(PIItem pIItem, u16 slot_id) const {
             return false;
     }
 
-    if (slot_id == BACKPACK_SLOT && NoirInventorySlots::BackpackEnabled()) {
+    if (slot_id == BACKPACK_SLOT) {
+        if (!NoirInventorySlots::BackpackEnabled())
+            return false;
+
         CCustomOutfit* pOutfit = m_pOwner->GetOutfit();
-        if ((pOutfit && !pOutfit->bIsBackpackAvaliable) || !NoirInventorySlots::BackpackEnabled())
+        if (pOutfit && !pOutfit->bIsBackpackAvaliable)
             return false;
     }
 

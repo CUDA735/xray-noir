@@ -31,6 +31,13 @@ CUIActorMenu::CUIActorMenu() {
     m_pInventoryBackpackList = NULL;
     m_pInventoryTorchList = NULL;
     m_pInventoryExtraPistolList = NULL;
+    m_KnifeSlotHighlight = NULL;
+    m_BinocularSlotHighlight = NULL;
+    m_BackpackSlotHighlight = NULL;
+    m_TorchSlotHighlight = NULL;
+    m_PistolExtraSlotHighlight = NULL;
+    m_BackpackOver = NULL;
+    m_Backpack_progress = NULL;
     m_currMenuMode = mmUndefined;
     m_trade_partner_inventory_state = 0;
     Construct();
@@ -137,16 +144,26 @@ void CUIActorMenu::Construct() {
         m_ArtefactSlotsHighlight[i]->Show(false);
     }
 
-    if (NoirInventorySlots::KnifeEnabled())
+    if (NoirInventorySlots::KnifeEnabled()) {
         m_KnifeSlotHighlight = UIHelper::CreateStatic(uiXml, "knife_slot_highlight", this);
-    if (NoirInventorySlots::BinocularEnabled())
+        m_KnifeSlotHighlight->Show(false);
+    }
+    if (NoirInventorySlots::BinocularEnabled()) {
         m_BinocularSlotHighlight = UIHelper::CreateStatic(uiXml, "binocular_slot_highlight", this);
-    if (NoirInventorySlots::TorchEnabled())
+        m_BinocularSlotHighlight->Show(false);
+    }
+    if (NoirInventorySlots::TorchEnabled()) {
         m_TorchSlotHighlight = UIHelper::CreateStatic(uiXml, "torch_slot_highlight", this);
-    if (NoirInventorySlots::ExtraPistolEnabled())
+        m_TorchSlotHighlight->Show(false);
+    }
+    if (NoirInventorySlots::ExtraPistolEnabled()) {
         m_PistolExtraSlotHighlight = UIHelper::CreateStatic(uiXml, "pistol_extra_slot_highlight", this);
-    if (NoirInventorySlots::BackpackEnabled())
+        m_PistolExtraSlotHighlight->Show(false);
+    }
+    if (NoirInventorySlots::BackpackEnabled()) {
         m_BackpackSlotHighlight = UIHelper::CreateStatic(uiXml, "backpack_slot_highlight", this);
+        m_BackpackSlotHighlight->Show(false);
+    }
 
     m_pInventoryBagList = UIHelper::CreateDragDropListEx(uiXml, "dragdrop_bag", this);
     m_pInventoryBeltList = UIHelper::CreateDragDropListEx(uiXml, "dragdrop_belt", this);

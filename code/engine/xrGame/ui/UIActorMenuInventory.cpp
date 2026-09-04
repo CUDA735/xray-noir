@@ -304,16 +304,17 @@ void CUIActorMenu::OnInventoryAction(PIItem pItem, u16 action_type) {
             }
         }
 
-        u32 i = 0;
-        while (all_lists[i]) {
+        for (u32 i = 0; i < all_lists_count; ++i) {
             CUIDragDropListEx* curr = all_lists[i];
+            if (!curr)
+                continue;
+
             if (RemoveItemFromList(curr, pItem)) {
 #ifndef MASTER_GOLD
                 Msg("all ok. item [%d] removed from list", pItem->object_id());
 #endif // #ifndef MASTER_GOLD
                 break;
             }
-            ++i;
         }
         if (m_pActorInvOwner)
             m_pQuickSlot->ReloadReferences(m_pActorInvOwner);
@@ -464,11 +465,14 @@ bool CUIActorMenu::ToSlot(CUICellItem* itm, bool force_place, u16 slot_id) {
         if (pOutfit && !pOutfit->bIsHelmetAvaliable)
             return false;
     }
-	if (slot_id == BACKPACK_SLOT) {
-		CCustomOutfit* pOutfit = m_pActorInvOwner->GetOutfit();
-		if(pOutfit && !pOutfit->bIsBackpackAvaliable)
-			return false;
-	}
+    if (slot_id == BACKPACK_SLOT) {
+        if (!NoirInventorySlots::BackpackEnabled())
+            return false;
+
+        CCustomOutfit* pOutfit = m_pActorInvOwner->GetOutfit();
+        if (pOutfit && !pOutfit->bIsBackpackAvaliable)
+            return false;
+    }
 
     if (m_pActorInvOwner->inventory().CanPutInSlot(iitem, slot_id)) {
         CUIDragDropListEx* new_owner = GetSlotList(slot_id);
@@ -488,7 +492,7 @@ bool CUIActorMenu::ToSlot(CUICellItem* itm, bool force_place, u16 slot_id) {
             }
             if (pOutfit && !pOutfit->bIsBackpackAvaliable) {
                 CUIDragDropListEx* backpack_list = GetSlotList(BACKPACK_SLOT);
-                if (backpack_list->ItemsCount() == 1) {
+                if (backpack_list && backpack_list->ItemsCount() == 1) {
                     CUICellItem* backpack_cell = backpack_list->GetItemIdx(0);
                     ToBag(backpack_cell, false);
                 }
@@ -530,7 +534,8 @@ bool CUIActorMenu::ToSlot(CUICellItem* itm, bool force_place, u16 slot_id) {
 
         PIItem _iitem = m_pActorInvOwner->inventory().ItemFromSlot(slot_id);
         CUIDragDropListEx* slot_list = GetSlotList(slot_id);
-        VERIFY(slot_list->ItemsCount() == 1);
+        if (!_iitem || !slot_list || slot_list->ItemsCount() != 1)
+            return false;
 
         CUICellItem* slot_cell = slot_list->GetItemIdx(0);
         VERIFY(slot_cell && ((PIItem)slot_cell->m_pData) == _iitem);
@@ -1138,8 +1143,7 @@ void CUIActorMenu::UpdateOutfit() {
     else
         m_HelmetOver->Show(false);
 
-    if (NoirInventorySlots::BackpackEnabled())
-    {
+    if (m_BackpackOver) {
         if (outfit && !outfit->bIsBackpackAvaliable)
             m_BackpackOver->Show(true);
         else

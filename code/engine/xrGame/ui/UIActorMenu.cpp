@@ -446,9 +446,16 @@ void CUIActorMenu::clear_highlight_lists() {
     m_HelmetSlotHighlight->Show(false);
     m_OutfitSlotHighlight->Show(false);
     m_DetectorSlotHighlight->Show(false);
-    m_KnifeSlotHighlight->Show(false);
-    m_BinocularSlotHighlight->Show(false);
-    m_BackpackSlotHighlight->Show(false);
+    if (m_KnifeSlotHighlight)
+        m_KnifeSlotHighlight->Show(false);
+    if (m_BinocularSlotHighlight)
+        m_BinocularSlotHighlight->Show(false);
+    if (m_BackpackSlotHighlight)
+        m_BackpackSlotHighlight->Show(false);
+    if (m_TorchSlotHighlight)
+        m_TorchSlotHighlight->Show(false);
+    if (m_PistolExtraSlotHighlight)
+        m_PistolExtraSlotHighlight->Show(false);
     for (u8 i = 0; i < 4; i++)
         m_QuickSlotsHighlight[i]->Show(false);
     for (u8 i = 0; i < e_af_count; i++)
@@ -494,15 +501,18 @@ void CUIActorMenu::highlight_item_slot(CUICellItem* cell_item) {
     CArtefact* artefact = smart_cast<CArtefact*>(item);
 
     if (knife) {
-        m_KnifeSlotHighlight->Show(true);
+        if (m_KnifeSlotHighlight)
+            m_KnifeSlotHighlight->Show(true);
         return;
     }
     if (binocular) {
-        m_BinocularSlotHighlight->Show(true);
+        if (m_BinocularSlotHighlight)
+            m_BinocularSlotHighlight->Show(true);
         return;
     }
     if (backpack) {
-        m_BackpackSlotHighlight->Show(true);
+        if (m_BackpackSlotHighlight)
+            m_BackpackSlotHighlight->Show(true);
         return;
     }
     if (weapon) {
@@ -857,7 +867,7 @@ void CUIActorMenu::UpdateConditionProgressBars() {
     else
         m_Helmet_progress->SetProgressPos(0);
 
-    if (NoirInventorySlots::BackpackEnabled())
+    if (m_Backpack_progress)
     {
         itm = m_pActorInvOwner->inventory().ItemFromSlot(BACKPACK_SLOT);
         if (itm)
