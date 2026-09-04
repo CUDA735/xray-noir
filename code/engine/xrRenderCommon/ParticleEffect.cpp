@@ -526,7 +526,7 @@ void CParticleEffect::Render(float) {
                 Fmatrix FTold = Device.mFullTransform;
                 if (GetHudMode()) {
                     RDEVICE.mProject.build_projection(
-                        deg2rad(psHUD_FOV * Device.fFOV), Device.fASPECT, VIEWPORT_NEAR,
+                        deg2rad(psHUD_FOV * Device.fFOV), Device.fASPECT, IE_VIEWPORT_NEAR,
                         g_pGamePersistent->Environment().CurrentEnv->far_plane);
 
                     Device.mFullTransform.mul(Device.mProject, Device.mView);
@@ -716,7 +716,7 @@ void CParticleEffect::Render(float) {
                 Fmatrix FTold = Device.mFullTransform;
                 if (GetHudMode()) {
                     RDEVICE.mProject.build_projection(
-                        deg2rad(psHUD_FOV * Device.fFOV), Device.fASPECT, VIEWPORT_NEAR,
+                        deg2rad(psHUD_FOV * Device.fFOV), Device.fASPECT, IE_VIEWPORT_NEAR,
                         g_pGamePersistent->Environment().CurrentEnv->far_plane);
 
                     Device.mFullTransform.mul(Device.mProject, Device.mView);
