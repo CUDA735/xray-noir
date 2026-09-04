@@ -14,12 +14,15 @@
 #include "string_table.h"
 #include "../xrCore/os_clipboard.h"
 
+#include "../xrEngine/DiscordRichPresence.h"
+
 #include "DemoInfo.h"
 #include "DemoInfo_Loader.h"
 
 #include <shellapi.h>
 
 #include "object_broker.h"
+//#include "../xrRenderCommon/infernis_pbr_settings.h"
 
 string128 ErrMsgBoxTemplate[] = { "message_box_invalid_host",
                                   "message_box_session_full",
@@ -173,6 +176,23 @@ void CMainMenu::Activate(bool bActivate) {
         Device.seqRender.Add(this, 4); // 1-console 2-cursor 3-tutorial
 
         Console->Execute("stat_memory");
+        //
+        // Do not replace location status when opening
+        // the in-game pause menu.
+        //
+        if (!g_pGameLevel) {
+            const shared_str menu_state = CStringTable().translate("st_discord_main_menu");
+
+            const shared_str exploring_state =
+                CStringTable().translate("st_discord_exploring_zone");
+
+            const shared_str hidden_task_state = CStringTable().translate("st_discord_on_mission");
+
+            g_discord.SetLocalizedStatusTexts(menu_state.c_str(), exploring_state.c_str(),
+                                              hidden_task_state.c_str());
+
+            g_discord.SetMenuStatus();
+        }
     } else {
         m_deactivated_frame = Device.dwFrame;
         m_Flags.set(flActive, FALSE);
@@ -608,11 +628,21 @@ void CMainMenu::OnConnectToMasterServerOkClicked(CUIWindow*, void*) { Hide_CTMS_
 
 LPCSTR CMainMenu::GetGSVer() {
     static string256 buff;
+
 #ifdef _M_X64
-    xr_strcpy(buff, 255, "1.6.2 x64");
+    string256 fname;
+    //bool usePBR = infernis_pbr_rendering_enabled();
+    bool usePBR = false; // Тимчасова заглушка, поки не буде реалізовано перевірку на PBR
+
+    if (usePBR) {
+        xr_strcpy(buff, 255, "0.2.5 x64 PBR");
+    } else {
+        xr_strcpy(buff, 255, "0.2.5 x64");
+    }
 #else
-    xr_strcpy(buff, 255, "1.6.2");
+    xr_strcpy(buff, 255, "0.2.5");
 #endif
+
     return buff;
 }
 
