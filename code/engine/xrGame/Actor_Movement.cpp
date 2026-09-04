@@ -495,6 +495,8 @@ void CActor::StopAnyMove() {
 bool CActor::is_jump() { return ((mstate_real & (mcJump | mcFall | mcLanding | mcLanding2)) != 0); }
 
 #include "CustomOutfit.h"
+#include "UserBackpack.h"
+#include "NoirInventorySlots.h"
 float CActor::MaxCarryWeight() const {
     float res = inventory().GetMaxWeight();
     res += get_additional_weight();
@@ -513,6 +515,14 @@ float CActor::get_additional_weight() const {
     CCustomOutfit* outfit = GetOutfit();
     if (outfit) {
         res += outfit->m_additional_weight;
+    }
+ 
+    if (NoirInventorySlots::BackpackEnabled())
+    {
+        CBackpack* backpack = smart_cast<CBackpack*>(inventory().ItemFromSlot(BACKPACK_SLOT));
+        if (backpack) {
+            res += backpack->m_additional_weight;
+        }
     }
 
     for (TIItemContainer::const_iterator it = inventory().m_belt.begin();

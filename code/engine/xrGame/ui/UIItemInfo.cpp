@@ -22,8 +22,10 @@
 #include "../Weapon.h"
 #include "../CustomOutfit.h"
 #include "../ActorHelmet.h"
+#include "../UserBackpack.h"
 #include "../eatable_item.h"
 #include "UICellItem.h"
+#include "string_table.h"
 
 extern const LPCSTR g_inventory_upgrade_xml;
 
@@ -217,8 +219,10 @@ void CUIItemInfo::InitItem(CUICellItem* pCellItem, CInventoryItem* pCompareItem,
             UIWeight->SetWndPos(pos);
         }
     }
-    if (UICost && IsGameTypeSingle() && item_price != u32(-1)) {
-        xr_sprintf(str, "%d RU", item_price); // will be owerwritten in multiplayer
+	if (UICost && IsGameTypeSingle() && item_price != u32(-1)) {
+        LPCSTR currency_name = CStringTable().translate("st_currency_name").c_str();
+        xr_sprintf(str, "%d %s", item_price, currency_name);
+        
         UICost->SetText(str);
         pos.x = UICost->GetWndPos().x;
         if (m_complex_desc) {
@@ -345,6 +349,7 @@ void CUIItemInfo::TryAddArtefactInfo(const shared_str& af_section) {
 void CUIItemInfo::TryAddOutfitInfo(CInventoryItem& pInvItem, CInventoryItem* pCompareItem) {
     CCustomOutfit* outfit = smart_cast<CCustomOutfit*>(&pInvItem);
     CHelmet* helmet = smart_cast<CHelmet*>(&pInvItem);
+	CBackpack* backpack = smart_cast<CBackpack*>(&pInvItem);
     if (outfit && UIOutfitInfo) {
         CCustomOutfit* comp_outfit = smart_cast<CCustomOutfit*>(pCompareItem);
         UIOutfitInfo->UpdateInfo(outfit, comp_outfit);
@@ -355,6 +360,12 @@ void CUIItemInfo::TryAddOutfitInfo(CInventoryItem& pInvItem, CInventoryItem* pCo
         UIOutfitInfo->UpdateInfo(helmet, comp_helmet);
         UIDesc->AddWindow(UIOutfitInfo, false);
     }
+	if (backpack && UIOutfitInfo)
+	{
+		CBackpack* comp_backpack = smart_cast<CBackpack*>(pCompareItem);
+		UIOutfitInfo->UpdateInfo(backpack, comp_backpack);
+		UIDesc->AddWindow(UIOutfitInfo, false);
+	}
 }
 
 void CUIItemInfo::TryAddUpgradeInfo(CInventoryItem& pInvItem) {

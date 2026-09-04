@@ -206,26 +206,26 @@
 	</right_delimiter>
 
 	<belt_list_over x="352" y="472" width="59" height="59" dx="65" stretch="0">
-		<texture >ui_inGame2_artefact_blocker</texture>
+		<texture>ui_inGame2_artefact_blocker</texture>
 	</belt_list_over>
 
 	<helmet_over x="456" y="11" width="111" height="115" stretch="1">
-		<texture >ui_inGame2_helmet_blocker</texture>
+		<texture>ui_inGame2_helmet_blocker</texture>
 	</helmet_over>
 
 	<backpack_over x="579" y="14" width="85" height="136" stretch="1">
-		<texture >ui_inGame2_backpack_blocker</texture>
+		<texture>ui_inGame2_backpack_blocker</texture>
 	</backpack_over>
 
 	<!-- Optional modular equipment slots. They are instantiated only when enabled. -->
 	<knife_slot_highlight x="355" y="18" width="88" height="58" stretch="1">
-		<texture>ui_inGame2_quick_item_highlighter</texture>
+		<texture>ui_inGame2_knife_highlighter</texture>
 	</knife_slot_highlight>
 	<binocular_slot_highlight x="355" y="88" width="88" height="58" stretch="1">
-		<texture>ui_inGame2_quick_item_highlighter</texture>
+		<texture>ui_inGame2_binocular_highlighter</texture>
 	</binocular_slot_highlight>
 	<backpack_slot_highlight x="579" y="14" width="91" height="130" stretch="1">
-		<texture>ui_inGame2_quick_item_highlighter</texture>
+		<texture>ui_inGame2_backpack_highlighter</texture>
 	</backpack_slot_highlight>
 	<torch_slot_highlight x="532" y="447" width="41" height="33" stretch="1">
 		<texture>ui_inGame2_quick_item_highlighter</texture>
@@ -242,7 +242,7 @@
 		custom_placement="0" a="0" virtual_cells="1" single_slot="1" vc_vert_align="c" vc_horiz_align="c"/>
 	<dragdrop_backpack x="579" y="14" width="91" height="130"
 		cell_width="41" cell_height="41" rows_num="3" cols_num="2"
-		custom_placement="0" a="0" virtual_cells="1" single_slot="1" vc_vert_align="c" vc_horiz_align="c"/>
+		custom_placement="0" a="0" virtual_cells="1" vc_vert_align="c" vc_horiz_align="c"/>
 	<dragdrop_torch x="532" y="447" width="41" height="33"
 		cell_width="41" cell_height="33" rows_num="2" cols_num="1"
 		custom_placement="0" a="0" virtual_cells="1" single_slot="1" vc_vert_align="c" vc_horiz_align="c"/>

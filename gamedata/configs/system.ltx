@@ -25,6 +25,10 @@
 #include "creatures\helicopter.ltx"
 #include "external.ltx"
 
+#include "infernis_engine\engine_external.ltx"
+#include "infernis_engine\consumables.ltx"
+#include "infernis_engine\backpacks.ltx"
+
 #include "creatures\game_relations.ltx"
 
 #include "mp\mp_actor.ltx"
@@ -49,7 +53,6 @@
 
 #include "evaluation.ltx"
 #include "fonts.ltx"
-#include "ui_extensions.ltx"
 
 #include "alife.ltx"
 ; SIMULATION
@@ -108,7 +111,7 @@ take_dist   	= 2
 max_weight    	= 50
 max_ruck    	= 56
 max_belt    	= 5 ;16
-slots_count   	= 13 ; highest slot id (slot 0 is reserved)
+slots_count   	= 14 ; highest slot id (slot 0 is reserved)
 
 slot_persistent_1   = true   ;knife
 slot_active_1       = true
@@ -148,6 +151,9 @@ slot_active_12      = false
 
 slot_persistent_13  = false ;optional third pistol slot
 slot_active_13      = true
+
+slot_persistent_14  = false ;backpack
+slot_active_14      = false
 
 
 [lights_hanging_lamp]

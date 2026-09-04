@@ -28,6 +28,7 @@
 CUIActorMenu::CUIActorMenu() {
     m_pInventoryKnifeList = NULL;
     m_pInventoryBinocularList = NULL;
+    m_pInventoryBackpackList = NULL;
     m_pInventoryTorchList = NULL;
     m_pInventoryExtraPistolList = NULL;
     m_currMenuMode = mmUndefined;
@@ -144,6 +145,8 @@ void CUIActorMenu::Construct() {
         m_TorchSlotHighlight = UIHelper::CreateStatic(uiXml, "torch_slot_highlight", this);
     if (NoirInventorySlots::ExtraPistolEnabled())
         m_PistolExtraSlotHighlight = UIHelper::CreateStatic(uiXml, "pistol_extra_slot_highlight", this);
+    if (NoirInventorySlots::BackpackEnabled())
+        m_BackpackSlotHighlight = UIHelper::CreateStatic(uiXml, "backpack_slot_highlight", this);
 
     m_pInventoryBagList = UIHelper::CreateDragDropListEx(uiXml, "dragdrop_bag", this);
     m_pInventoryBeltList = UIHelper::CreateDragDropListEx(uiXml, "dragdrop_belt", this);
@@ -155,13 +158,13 @@ void CUIActorMenu::Construct() {
     if (NoirInventorySlots::KnifeEnabled())
         m_pInventoryKnifeList = UIHelper::CreateDragDropListEx(uiXml, "dragdrop_knife", this);
     if (NoirInventorySlots::BinocularEnabled())
-        m_pInventoryBinocularList =
-            UIHelper::CreateDragDropListEx(uiXml, "dragdrop_binocular", this);
+        m_pInventoryBinocularList = UIHelper::CreateDragDropListEx(uiXml, "dragdrop_binocular", this);
     if (NoirInventorySlots::TorchEnabled())
         m_pInventoryTorchList = UIHelper::CreateDragDropListEx(uiXml, "dragdrop_torch", this);
     if (NoirInventorySlots::ExtraPistolEnabled())
-        m_pInventoryExtraPistolList =
-            UIHelper::CreateDragDropListEx(uiXml, "dragdrop_pistol_extra", this);
+        m_pInventoryExtraPistolList = UIHelper::CreateDragDropListEx(uiXml, "dragdrop_pistol_extra", this);
+    if (NoirInventorySlots::BackpackEnabled())
+        m_pInventoryBackpackList = UIHelper::CreateDragDropListEx(uiXml, "dragdrop_backpack", this);
     m_pTradeActorBagList = UIHelper::CreateDragDropListEx(uiXml, "dragdrop_actor_trade_bag", this);
     m_pTradeActorList = UIHelper::CreateDragDropListEx(uiXml, "dragdrop_actor_trade", this);
     m_pTradePartnerBagList = UIHelper::CreateDragDropListEx(uiXml, "dragdrop_partner_bag", this);
@@ -187,6 +190,11 @@ void CUIActorMenu::Construct() {
     m_HelmetOver = UIHelper::CreateStatic(uiXml, "helmet_over", this);
     m_HelmetOver->Show(false);
 
+    if (NoirInventorySlots::BackpackEnabled()) {
+        m_BackpackOver = UIHelper::CreateStatic(uiXml, "backpack_over", this);
+        m_BackpackOver->Show(false);
+    }
+
     m_ActorMoney = UIHelper::CreateTextWnd(uiXml, "actor_money_static", this);
     m_PartnerMoney = UIHelper::CreateTextWnd(uiXml, "partner_money_static", this);
     m_QuickSlot1 = UIHelper::CreateTextWnd(uiXml, "quick_slot1_text", this);
@@ -197,6 +205,8 @@ void CUIActorMenu::Construct() {
     m_WeaponSlot1_progress = UIHelper::CreateProgressBar(uiXml, "progess_bar_weapon1", this);
     m_WeaponSlot2_progress = UIHelper::CreateProgressBar(uiXml, "progess_bar_weapon2", this);
     m_Helmet_progress = UIHelper::CreateProgressBar(uiXml, "progess_bar_helmet", this);
+    if (NoirInventorySlots::BackpackEnabled())
+        m_Backpack_progress = UIHelper::CreateProgressBar(uiXml, "progess_bar_backpack", this);
     m_Outfit_progress = UIHelper::CreateProgressBar(uiXml, "progess_bar_outfit", this);
 
     m_trade_buy_button = UIHelper::Create3tButton(uiXml, "trade_buy_button", this);
@@ -281,6 +291,8 @@ void CUIActorMenu::Construct() {
         BindDragDropListEvents(m_pInventoryBinocularList);
     if (m_pInventoryTorchList)
         BindDragDropListEvents(m_pInventoryTorchList);
+    if (m_pInventoryBackpackList)
+        BindDragDropListEvents(m_pInventoryBackpackList);
     if (m_pInventoryExtraPistolList)
         BindDragDropListEvents(m_pInventoryExtraPistolList);
     BindDragDropListEvents(m_pInventoryOutfitList);

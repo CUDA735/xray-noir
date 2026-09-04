@@ -34,6 +34,8 @@
 #include "../PDA.h"
 
 #include "../actor_defs.h"
+#include "../UserBackpack.h"
+#include "../NoirInventorySlots.h"
 
 void move_item_from_to(u16 from_id, u16 to_id, u16 what_id);
 
@@ -49,6 +51,8 @@ void CUIActorMenu::InitInventoryMode() {
         m_pInventoryKnifeList->Show(true);
     if (m_pInventoryBinocularList)
         m_pInventoryBinocularList->Show(true);
+    if (m_pInventoryBackpackList)
+        m_pInventoryBackpackList->Show(true);
     if (m_pInventoryTorchList)
         m_pInventoryTorchList->Show(true);
     if (m_pInventoryExtraPistolList)
@@ -220,6 +224,7 @@ void CUIActorMenu::OnInventoryAction(PIItem pItem, u16 action_type) {
                                        m_pInventoryAutomaticList,
                                        m_pInventoryKnifeList,
                                        m_pInventoryBinocularList,
+                                       m_pInventoryBackpackList,
                                        m_pInventoryTorchList,
                                        m_pInventoryExtraPistolList,
                                        m_pInventoryOutfitList,
@@ -394,6 +399,7 @@ void CUIActorMenu::InitInventoryContents(CUIDragDropListEx* pBagList) {
     InitCellForSlot(DETECTOR_SLOT);
     InitCellForSlot(GRENADE_SLOT);
     InitCellForSlot(HELMET_SLOT);
+	InitCellForSlot(BACKPACK_SLOT);
 
     curr_list = m_pInventoryBeltList;
     TIItemContainer::iterator itb = m_pActorInvOwner->inventory().m_belt.begin();
@@ -458,12 +464,17 @@ bool CUIActorMenu::ToSlot(CUICellItem* itm, bool force_place, u16 slot_id) {
         if (pOutfit && !pOutfit->bIsHelmetAvaliable)
             return false;
     }
+	if (slot_id == BACKPACK_SLOT) {
+		CCustomOutfit* pOutfit = m_pActorInvOwner->GetOutfit();
+		if(pOutfit && !pOutfit->bIsBackpackAvaliable)
+			return false;
+	}
 
     if (m_pActorInvOwner->inventory().CanPutInSlot(iitem, slot_id)) {
         CUIDragDropListEx* new_owner = GetSlotList(slot_id);
 
         if (slot_id == GRENADE_SLOT || !new_owner) {
-            return true; // fake, sorry (((
+            return true; // fake, sorry ((( Ladno.
         }
 
         if (slot_id == OUTFIT_SLOT) {
@@ -473,6 +484,13 @@ bool CUIActorMenu::ToSlot(CUICellItem* itm, bool force_place, u16 slot_id) {
                 if (helmet_list->ItemsCount() == 1) {
                     CUICellItem* helmet_cell = helmet_list->GetItemIdx(0);
                     ToBag(helmet_cell, false);
+                }
+            }
+            if (pOutfit && !pOutfit->bIsBackpackAvaliable) {
+                CUIDragDropListEx* backpack_list = GetSlotList(BACKPACK_SLOT);
+                if (backpack_list->ItemsCount() == 1) {
+                    CUICellItem* backpack_cell = backpack_list->GetItemIdx(0);
+                    ToBag(backpack_cell, false);
                 }
             }
         }
@@ -661,6 +679,10 @@ CUIDragDropListEx* CUIActorMenu::GetSlotList(u16 slot_idx) {
         return m_pInventoryDetectorList;
         break;
 
+	case BACKPACK_SLOT:
+		return m_pInventoryBackpackList;
+		break;
+
     case GRENADE_SLOT: // fake
         if (m_currMenuMode == mmTrade) {
             return m_pTradeActorBagList;
@@ -788,13 +810,14 @@ void CUIActorMenu::ActivatePropertiesBox() {
 void CUIActorMenu::PropertiesBoxForSlots(PIItem item, bool& b_show) {
     CCustomOutfit* pOutfit = smart_cast<CCustomOutfit*>(item);
     CHelmet* pHelmet = smart_cast<CHelmet*>(item);
+    CBackpack* pBackpack = smart_cast<CBackpack*>(item);
     CInventory& inv = m_pActorInvOwner->inventory();
 
     // Флаг-признак для невлючения пункта контекстного меню: Dreess Outfit, если костюм уже надет
     bool bAlreadyDressed = false;
     u16 cur_slot = item->BaseSlot();
 
-    if (!pOutfit && !pHelmet && cur_slot != NO_ACTIVE_SLOT && !inv.SlotIsPersistent(cur_slot) &&
+    if (!pOutfit && !pHelmet && !pBackpack && cur_slot != NO_ACTIVE_SLOT && !inv.SlotIsPersistent(cur_slot) &&
         inv.CanPutInSlot(item, cur_slot)) {
         m_UIPropertiesBox->AddItem("st_move_to_slot", NULL, INVENTORY_TO_SLOT_ACTION);
         b_show = true;
@@ -807,9 +830,12 @@ void CUIActorMenu::PropertiesBoxForSlots(PIItem item, bool& b_show) {
     if (item->Ruck() && inv.CanPutInRuck(item) &&
         (cur_slot == NO_ACTIVE_SLOT || !inv.SlotIsPersistent(cur_slot))) {
         if (!pOutfit) {
-            if (!pHelmet)
-                m_UIPropertiesBox->AddItem("st_move_to_bag", NULL, INVENTORY_TO_BAG_ACTION);
-            else
+            if (!pHelmet) {
+                if (!pBackpack)
+                    m_UIPropertiesBox->AddItem("st_move_to_bag", NULL, INVENTORY_TO_BAG_ACTION);
+                else
+                    m_UIPropertiesBox->AddItem("st_undress_backpack", NULL, INVENTORY_TO_BAG_ACTION);
+            } else
                 m_UIPropertiesBox->AddItem("st_undress_helmet", NULL, INVENTORY_TO_BAG_ACTION);
         } else
             m_UIPropertiesBox->AddItem("st_undress_outfit", NULL, INVENTORY_TO_BAG_ACTION);
@@ -827,6 +853,10 @@ void CUIActorMenu::PropertiesBoxForSlots(PIItem item, bool& b_show) {
         m_UIPropertiesBox->AddItem("st_dress_helmet", NULL, INVENTORY_TO_SLOT_ACTION);
         b_show = true;
     }
+	if (NoirInventorySlots::BackpackEnabled() && pBackpack && !bAlreadyDressed && (!outfit_in_slot || outfit_in_slot->bIsBackpackAvaliable)) {
+		m_UIPropertiesBox->AddItem( "st_dress_backpack",  NULL, INVENTORY_TO_SLOT_ACTION );
+		b_show = true;
+	}
 }
 
 void CUIActorMenu::PropertiesBoxForWeapon(CUICellItem* cell_item, PIItem item, bool& b_show) {
@@ -1108,6 +1138,13 @@ void CUIActorMenu::UpdateOutfit() {
     else
         m_HelmetOver->Show(false);
 
+    if (NoirInventorySlots::BackpackEnabled())
+    {
+        if (outfit && !outfit->bIsBackpackAvaliable)
+            m_BackpackOver->Show(true);
+        else
+            m_BackpackOver->Show(false);
+    }
     if (!outfit) {
         MoveArtefactsToBag();
         return;

@@ -212,15 +212,15 @@
 	</right_delimiter>
 
 	<belt_list_over x="384" y="472" width="47" height="59" dx="52" stretch="1">
-		<texture >ui_inGame2_artefact_blocker</texture>
+		<texture>ui_inGame2_artefact_blocker</texture>
 	</belt_list_over>
 
 	<helmet_over x="467" y="11" width="89" height="115" stretch="1">
-		<texture >ui_inGame2_helmet_blocker</texture>
+		<texture>ui_inGame2_helmet_blocker</texture>
 	</helmet_over>
 
 	<backpack_over x="559" y="14" width="85" height="136" stretch="1">
-		<texture >ui_inGame2_backpack_blocker</texture>
+		<texture>ui_inGame2_backpack_blocker</texture>
 	</backpack_over>
 
 	<!-- Optional modular equipment slots. They are instantiated only when enabled. -->

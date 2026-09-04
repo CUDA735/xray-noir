@@ -9,6 +9,7 @@ struct SNoirInventorySlotSettings {
     bool binocular = false;
     bool torch = false;
     bool extra_pistol = false;
+    bool backpack = false;
 };
 
 SNoirInventorySlotSettings LoadNoirInventorySlotSettings() {
@@ -46,10 +47,12 @@ SNoirInventorySlotSettings LoadNoirInventorySlotSettings() {
         slots.line_exist("slots", "torch_slot") && slots.r_bool("slots", "torch_slot");
     settings.extra_pistol = slots.line_exist("slots", "pistol_slot") &&
         slots.r_bool("slots", "pistol_slot");
+    settings.backpack = slots.line_exist("slots", "backpack_slot") &&
+        slots.r_bool("slots", "backpack_slot");
 
-    Msg("* [NoirInventorySlots] knife=%s, binocular=%s, torch=%s, pistol=%s",
+    Msg("* [NoirInventorySlots] knife=%s, binocular=%s, torch=%s, pistol=%s, backpack=%s",
         settings.knife ? "on" : "off", settings.binocular ? "on" : "off",
-        settings.torch ? "on" : "off", settings.extra_pistol ? "on" : "off");
+        settings.torch ? "on" : "off", settings.extra_pistol ? "on" : "off", settings.backpack ? "on" : "off");
 
     return settings;
 }
@@ -73,6 +76,8 @@ bool TorchEnabled() { return Enabled() && Settings().torch; }
 
 bool ExtraPistolEnabled() { return Enabled() && Settings().extra_pistol; }
 
+bool BackpackEnabled() { return Enabled() && Settings().backpack; }
+
 bool IsSlotEnabled(u16 slot_id) {
     switch (slot_id) {
     case KNIFE_SLOT:
@@ -83,6 +88,8 @@ bool IsSlotEnabled(u16 slot_id) {
         return TorchEnabled();
     case EXTRA_PISTOL_SLOT:
         return ExtraPistolEnabled();
+    case BACKPACK_SLOT:
+        return BackpackEnabled();
     default:
         return false;
     }

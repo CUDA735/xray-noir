@@ -35,6 +35,8 @@
 #include "../WeaponRPG7.h"
 #include "../CustomOutfit.h"
 #include "../ActorHelmet.h"
+#include "../UserBackpack.h"
+#include "../NoirInventorySlots.h"
 
 // -----
 
@@ -103,6 +105,9 @@ void CUIInventoryUpgradeWnd::InitInventory(CInventoryItem* item, bool can_upgrad
         if (smart_cast<CWeaponRPG7*>(item))
             m_item->SetShader(InventoryUtilities::GetOutfitUpgradeIconsShader());
     } else if (smart_cast<CCustomOutfit*>(item) || smart_cast<CHelmet*>(item)) {
+        is_shader = true;
+        m_item->SetShader(InventoryUtilities::GetOutfitUpgradeIconsShader());
+    } else if (NoirInventorySlots::BackpackEnabled() && ((smart_cast<CCustomOutfit*>(item) || smart_cast<CBackpack*>(item)))) {
         is_shader = true;
         m_item->SetShader(InventoryUtilities::GetOutfitUpgradeIconsShader());
     }

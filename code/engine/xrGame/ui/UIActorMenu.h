@@ -93,6 +93,7 @@ protected:
     CUIDragDropListEx* m_pInventoryPistolList;
     CUIDragDropListEx* m_pInventoryAutomaticList;
     CUIDragDropListEx* m_pInventoryKnifeList;
+    CUIDragDropListEx* m_pInventoryBackpackList;
     CUIDragDropListEx* m_pInventoryBinocularList;
     CUIDragDropListEx* m_pInventoryTorchList;
     CUIDragDropListEx* m_pInventoryExtraPistolList;
@@ -111,6 +112,7 @@ protected:
     enum { e_af_count = 5 };
     CUIStatic* m_belt_list_over[e_af_count];
     CUIStatic* m_HelmetOver;
+    CUIStatic* m_BackpackOver;
 
     CUIStatic* m_InvSlot2Highlight;
     CUIStatic* m_InvSlot3Highlight;
@@ -119,6 +121,7 @@ protected:
     CUIStatic* m_DetectorSlotHighlight;
     CUIStatic* m_KnifeSlotHighlight;
     CUIStatic* m_BinocularSlotHighlight;
+    CUIStatic* m_BackpackSlotHighlight;
     CUIStatic* m_TorchSlotHighlight;
     CUIStatic* m_PistolExtraSlotHighlight;
     CUIStatic* m_QuickSlotsHighlight[4];
@@ -146,6 +149,7 @@ protected:
     CUIProgressBar* m_WeaponSlot1_progress;
     CUIProgressBar* m_WeaponSlot2_progress;
     CUIProgressBar* m_Helmet_progress;
+    CUIProgressBar* m_Backpack_progress;
     CUIProgressBar* m_Outfit_progress;
     // bottom ---------------------------------
     CUIStatic* m_ActorBottomInfo;

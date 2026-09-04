@@ -1461,6 +1461,7 @@ set(AI_ASCRIPT_SCRIPTCLASSES_UI_COMMON__DEBUG_FONTS ui/UIDebugFonts.h
                                                     ui/UIDebugFonts.cpp)
 
 set(CORE_CLIENT_OBJECTS_ITEMS__AND__WEAPONS_OUTFIT ActorHelmet.h
+                                                   UserBackpack.h
                                                    BoneProtections.h
                                                    CustomOutfit.h
                                                    ExoOutfit.h
@@ -1468,6 +1469,7 @@ set(CORE_CLIENT_OBJECTS_ITEMS__AND__WEAPONS_OUTFIT ActorHelmet.h
                                                    ScientificOutfit.h
                                                    StalkerOutfit.h
                                                    ActorHelmet.cpp
+                                                   UserBackpack.cpp
                                                    BoneProtections.cpp
                                                    CustomOutfit.cpp
                                                    ExoOutfit.cpp

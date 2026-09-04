@@ -22,6 +22,7 @@
 #include "../trade_parameters.h"
 #include "../ActorHelmet.h"
 #include "../CustomOutfit.h"
+#include "../UserBackpack.h"
 #include "../CustomDetector.h"
 #include "../eatable_item.h"
 
@@ -39,6 +40,8 @@
 #include "UIPropertiesBox.h"
 #include "UIMainIngameWnd.h"
 #include "../Trade.h"
+#include "string_table.h"
+#include "../NoirInventorySlots.h"
 
 void CUIActorMenu::SetActor(CInventoryOwner* io) {
     R_ASSERT(!IsShown());
@@ -277,6 +280,8 @@ EDDListType CUIActorMenu::GetListType(CUIDragDropListEx* l) {
         return iActorSlot;
     if (m_pInventoryExtraPistolList && l == m_pInventoryExtraPistolList)
         return iActorSlot;
+    if (m_pInventoryBackpackList && l == m_pInventoryBackpackList)
+        return iActorSlot;
     if (l == m_pInventoryOutfitList)
         return iActorSlot;
     if (l == m_pInventoryHelmetList)
@@ -443,6 +448,7 @@ void CUIActorMenu::clear_highlight_lists() {
     m_DetectorSlotHighlight->Show(false);
     m_KnifeSlotHighlight->Show(false);
     m_BinocularSlotHighlight->Show(false);
+    m_BackpackSlotHighlight->Show(false);
     for (u8 i = 0; i < 4; i++)
         m_QuickSlotsHighlight[i]->Show(false);
     for (u8 i = 0; i < e_af_count; i++)
@@ -479,6 +485,7 @@ void CUIActorMenu::highlight_item_slot(CUICellItem* cell_item) {
 
     CWeaponKnife* knife = smart_cast<CWeaponKnife*>(item);
     CWeaponBinoculars* binocular = smart_cast<CWeaponBinoculars*>(item);
+    CBackpack* backpack = smart_cast<CBackpack*>(item);
     CWeapon* weapon = smart_cast<CWeapon*>(item);
     CHelmet* helmet = smart_cast<CHelmet*>(item);
     CCustomOutfit* outfit = smart_cast<CCustomOutfit*>(item);
@@ -492,6 +499,10 @@ void CUIActorMenu::highlight_item_slot(CUICellItem* cell_item) {
     }
     if (binocular) {
         m_BinocularSlotHighlight->Show(true);
+        return;
+    }
+    if (backpack) {
+        m_BackpackSlotHighlight->Show(true);
         return;
     }
     if (weapon) {
@@ -741,6 +752,8 @@ void CUIActorMenu::ClearAllLists() {
         m_pInventoryKnifeList->ClearAll(true);
     if (m_pInventoryBinocularList)
         m_pInventoryBinocularList->ClearAll(true);
+    if (m_pInventoryBackpackList)
+        m_pInventoryBackpackList->ClearAll(true);
     if (m_pInventoryTorchList)
         m_pInventoryTorchList->ClearAll(true);
     if (m_pInventoryExtraPistolList)
@@ -784,9 +797,11 @@ void CUIActorMenu::UpdateActorMP() {
     }
 
     int money = Game().local_player->money_for_round;
+    CStringTable st;
+    LPCSTR currency_name = st.translate("st_currency_name").c_str();
 
     string64 buf;
-    xr_sprintf(buf, "%d RU", money);
+    xr_sprintf(buf, "%d %s", money, currency_name);
     m_ActorMoney->SetText(buf);
 
     m_ActorCharacterInfo->InitCharacterMP(Game().local_player->getName(), "ui_npc_u_nebo_1");
@@ -841,4 +856,13 @@ void CUIActorMenu::UpdateConditionProgressBars() {
         m_Helmet_progress->SetProgressPos(iCeil(itm->GetCondition() * 15.0f) / 15.0f);
     else
         m_Helmet_progress->SetProgressPos(0);
+
+    if (NoirInventorySlots::BackpackEnabled())
+    {
+        itm = m_pActorInvOwner->inventory().ItemFromSlot(BACKPACK_SLOT);
+        if (itm)
+            m_Backpack_progress->SetProgressPos(iCeil(itm->GetCondition() * 15.0f) / 15.0f);
+        else
+            m_Backpack_progress->SetProgressPos(0);
+    }
 }

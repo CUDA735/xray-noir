@@ -13,6 +13,7 @@
 #include "Weapon.h"
 #include "CustomOutfit.h"
 #include "ActorHelmet.h"
+#include "UserBackpack.h"
 
 CUICellItem* CUICellItem::m_mouse_selected_item = NULL;
 
@@ -183,7 +184,8 @@ void CUICellItem::UpdateConditionProgressBar() {
         CWeapon* pWeapon = smart_cast<CWeapon*>(itm);
         CCustomOutfit* pOutfit = smart_cast<CCustomOutfit*>(itm);
         CHelmet* pHelmet = smart_cast<CHelmet*>(itm);
-        if (pWeapon || pOutfit || pHelmet) {
+        CBackpack* pBackpack = smart_cast<CBackpack*>(itm);
+        if (pWeapon || pOutfit || pHelmet || pBackpack) {
             Ivector2 itm_grid_size = GetGridSize();
             if (m_pParentList->GetVerticalPlacement())
                 std::swap(itm_grid_size.x, itm_grid_size.y);
