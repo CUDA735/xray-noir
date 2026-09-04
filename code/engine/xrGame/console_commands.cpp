@@ -22,6 +22,8 @@
 #include "script_engine_space.h"
 #include "script_process.h"
 #include "xrServer_Objects.h"
+#include "xrServer_Objects_ALife_Monsters.h"
+#include "restriction_space.h"
 #include "ui/UIMainIngameWnd.h"
 //#include "../xrphysics/PhysicsGamePars.h"
 #include "../xrphysics/iphworld.h"
@@ -39,6 +41,8 @@
 #include "MainMenu.h"
 #include "saved_game_wrapper.h"
 #include "level_graph.h"
+#include "game_graph.h"
+#include "ai_object_location.h"
 //#include "../xrEngine/resourcemanager.h"
 #include "cameralook.h"
 #include "character_hit_animations_params.h"
@@ -49,7 +53,6 @@
 #ifdef DEBUG
 #include "PHDebug.h"
 #include "ui/UIDebugFonts.h"
-#include "game_graph.h"
 #include "CharacterPhysicsSupport.h"
 #endif // DEBUG
 
@@ -173,6 +176,98 @@ public:
 
 #endif // #ifdef DEBUG
 // console commands
+
+static bool is_dev_mode() {
+    return strstr(Core.Params, "-dev_mode") != nullptr ||
+           strstr(Core.Params, "-developer_mode") != nullptr;
+}
+
+class CCC_Mask_Dev : public CCC_Mask {
+public:
+    CCC_Mask_Dev(LPCSTR N, Flags32* V, u32 M) : CCC_Mask(N, V, M) {}
+
+    virtual void Execute(LPCSTR args) {
+        if (!is_dev_mode()) {
+            Msg("! Command available only in -dev_mode");
+            return;
+        }
+
+        CCC_Mask::Execute(args);
+    }
+};
+
+class CCC_FovDev : public IConsole_Command {
+public:
+    CCC_FovDev(LPCSTR N) : IConsole_Command(N) { bEmptyArgsHandled = false; }
+
+    virtual void Execute(LPCSTR args) {
+        if (!is_dev_mode()) {
+            Msg("! Command available only in -dev_mode");
+            return;
+        }
+
+        float value = g_fov;
+        if (sscanf(args, "%f", &value) < 1) {
+            Msg("! Usage: fov <value> [5.0 - 180.0]");
+            return;
+        }
+
+        clamp(value, 5.0f, 180.0f);
+        g_fov = value;
+        Msg("~ FOV set to: %.2f", g_fov);
+    }
+
+    virtual void Status(TStatus& S) { xr_sprintf(S, sizeof(S), "%.2f", g_fov); }
+    virtual void Info(TInfo& I) { xr_strcpy(I, "[5.0 - 180.0]"); }
+
+    virtual void fill_tips(vecTips& tips, u32 mode) {
+        if (!is_dev_mode())
+            return;
+
+        tips.push_back("55");
+        tips.push_back("67.5");
+        tips.push_back("75");
+        tips.push_back("90");
+    }
+};
+
+class CCC_GlobalTimeFactorDev : public IConsole_Command {
+public:
+    CCC_GlobalTimeFactorDev(LPCSTR N) : IConsole_Command(N) { bEmptyArgsHandled = false; }
+
+    virtual void Execute(LPCSTR args) {
+        if (!is_dev_mode()) {
+            Msg("! Command available only in -dev_mode");
+            return;
+        }
+
+        float value = Device.time_factor();
+        if (sscanf(args, "%f", &value) < 1) {
+            Msg("! Usage: time_factor <value> [0.001 - 1000.0]");
+            return;
+        }
+
+        clamp(value, 0.001f, 1000.0f);
+        Device.time_factor(value);
+        Msg("~ Global time factor set to: %.3f", Device.time_factor());
+    }
+
+    virtual void Status(TStatus& S) { xr_sprintf(S, sizeof(S), "%.3f", Device.time_factor()); }
+    virtual void Info(TInfo& I) { xr_strcpy(I, "[0.001 - 1000.0]"); }
+
+    virtual void fill_tips(vecTips& tips, u32 mode) {
+        if (!is_dev_mode())
+            return;
+
+        tips.push_back("0.25");
+        tips.push_back("0.5");
+        tips.push_back("1");
+        tips.push_back("2");
+        tips.push_back("5");
+        tips.push_back("10");
+    }
+};
+
 class CCC_GameDifficulty : public CCC_Token {
 public:
     CCC_GameDifficulty(LPCSTR N)
@@ -226,47 +321,209 @@ public:
 };
 #endif // DEBUG_CAPS
 
-class CCC_ALifeTimeFactor : public IConsole_Command {
+class CCC_TimeFactorDev : public IConsole_Command {
 public:
-    CCC_ALifeTimeFactor(LPCSTR N) : IConsole_Command(N){};
+    CCC_TimeFactorDev(LPCSTR N) : IConsole_Command(N) { bEmptyArgsHandled = false; }
+
     virtual void Execute(LPCSTR args) {
-        float id1 = 0.0f;
-        sscanf(args, "%f", &id1);
-        if (id1 < EPS_L)
-            Msg("Invalid time factor! (%.4f)", id1);
-        else {
-            if (!OnServer())
-                return;
-
-            Level().SetGameTimeFactor(id1);
+        if (!is_dev_mode()) {
+            Msg("! Command available only in -dev_mode");
+            return;
         }
-    }
-
-    virtual void Save(IWriter* F){};
-    virtual void Status(TStatus& S) {
         if (!g_pGameLevel)
             return;
 
-        float v = Level().GetGameTimeFactor();
-        xr_sprintf(S, sizeof(S), "%3.5f", v);
-        while (xr_strlen(S) && ('0' == S[xr_strlen(S) - 1]))
-            S[xr_strlen(S) - 1] = 0;
-    }
-    virtual void Info(TInfo& I) {
-        if (!OnServer())
+        float value = 10.0f;
+        if (sscanf(args, "%f", &value) < 1) {
+            Msg("! Usage: al_time_factor <value> (default is 10.0)");
             return;
-        float v = Level().GetGameTimeFactor();
-        xr_sprintf(I, sizeof(I), " value = %3.5f", v);
-    }
-    virtual void fill_tips(vecTips& tips, u32 mode) {
-        if (!OnServer())
-            return;
-        float v = Level().GetGameTimeFactor();
+        }
 
-        TStatus str;
-        xr_sprintf(str, sizeof(str), "%3.5f  (current)  [0.0,1000.0]", v);
-        tips.push_back(str);
-        IConsole_Command::fill_tips(tips, mode);
+        clamp(value, 1.0f, 100000.0f);
+        Level().SetGameTimeFactor(value);
+        Msg("~ In-game time factor set to: %.2f", value);
+    }
+
+    virtual void Status(TStatus& S) {
+        if (g_pGameLevel)
+            xr_sprintf(S, sizeof(S), "%.2f", Level().GetGameTimeFactor());
+        else
+            xr_strcpy(S, "10.00");
+    }
+
+    virtual void fill_tips(vecTips& tips, u32 mode) {
+        if (!is_dev_mode())
+            return;
+
+        tips.push_back("10");
+        tips.push_back("100");
+        tips.push_back("1000");
+    }
+};
+
+// g_spawn_to_inventory <section> [count]
+class CCC_SpawnToInventory : public IConsole_Command {
+public:
+    CCC_SpawnToInventory(LPCSTR N) : IConsole_Command(N) { bEmptyArgsHandled = false; }
+
+    virtual void Execute(LPCSTR args) {
+        if (!is_dev_mode()) {
+            Msg("! Command available only in -dev_mode");
+            return;
+        }
+        if (!g_pGameLevel || !Actor())
+            return;
+
+        char section[256];
+        int count = 1;
+        if (sscanf(args, "%255s %d", section, &count) < 1) {
+            Msg("! Usage: g_spawn_to_inventory <section> [count]");
+            return;
+        }
+        if (!pSettings->section_exist(section)) {
+            Msg("! Section [%s] doesn't exist!", section);
+            return;
+        }
+
+        if (count > 250) {
+            Msg("! [g_spawn_to_inventory]: Cancelled. Max count is 250.");
+            count = 250;
+        }
+
+        for (int i = 0; i < count; ++i) {
+            Level().spawn_item(section, Actor()->Position(),
+                               Actor()->ai_location().level_vertex_id(), Actor()->ID());
+        }
+        Msg("~ Spawned %d of [%s] to inventory.", count, section);
+    }
+};
+
+// g_spawn <section> [count]
+class CCC_SpawnToCrosshair : public IConsole_Command {
+public:
+    CCC_SpawnToCrosshair(LPCSTR N) : IConsole_Command(N) { bEmptyArgsHandled = false; }
+
+    virtual void Execute(LPCSTR args) {
+        if (!is_dev_mode()) {
+            Msg("! Command available only in -dev_mode");
+            return;
+        }
+        if (!g_pGameLevel || !Actor())
+            return;
+
+        char section[256];
+        int count = 1;
+        if (sscanf(args, "%255s %d", section, &count) < 1) {
+            Msg("! Usage: g_spawn <section> [count]");
+            return;
+        }
+        if (!pSettings->section_exist(section)) {
+            Msg("! Section [%s] doesn't exist!", section);
+            return;
+        }
+
+        if (count > 250) {
+            Msg("! [g_spawn]: Cancelled. Max count is 250.");
+            count = 250;
+        }
+
+        const Fvector& ray_start = Device.vCameraPosition;
+        const Fvector& ray_direction = Device.vCameraDirection;
+        collide::rq_result ray_result;
+        Fvector spawn_position = Actor()->Position();
+
+        if (Level().ObjectSpace.RayPick(ray_start, ray_direction, 50.0f, collide::rqtBoth,
+                                        ray_result, Actor())) {
+            spawn_position.mad(ray_start, ray_direction, ray_result.range);
+            spawn_position.y += 0.2f;
+        } else {
+            spawn_position.mad(ray_start, ray_direction, 3.0f);
+        }
+
+        u32 level_vertex_id = ai().level_graph().vertex_id(spawn_position);
+        if (!ai().level_graph().valid_vertex_id(level_vertex_id))
+            level_vertex_id = Actor()->ai_location().level_vertex_id();
+
+        game_sv_Single* game = smart_cast<game_sv_Single*>(Level().Server->game);
+        if (!game)
+            return;
+
+        for (int i = 0; i < count; ++i) {
+            CSE_Abstract* entity = game->alife().spawn_item(
+                section, spawn_position, level_vertex_id,
+                Actor()->ai_location().game_vertex_id(), ALife::_OBJECT_ID(-1));
+
+            // Console-spawned anomalous zones need a collision shape.
+            CSE_ALifeAnomalousZone* anomaly = smart_cast<CSE_ALifeAnomalousZone*>(entity);
+            if (anomaly) {
+                CShapeData::shape_def shape;
+                shape.data.sphere.P.set(0.0f, 0.0f, 0.0f);
+                shape.data.sphere.R = 3.0f;
+                shape.type = CShapeData::cfSphere;
+                anomaly->assign_shapes(&shape, 1);
+                anomaly->m_space_restrictor_type = RestrictionSpace::eRestrictorTypeNone;
+            }
+        }
+
+        Msg("~ Spawned %d of [%s] at crosshair.", count, section);
+    }
+};
+
+class CCC_InfoPortion : public IConsole_Command {
+    bool m_give;
+
+public:
+    CCC_InfoPortion(LPCSTR N, bool give) : IConsole_Command(N), m_give(give) {
+        bEmptyArgsHandled = false;
+    }
+
+    virtual void Execute(LPCSTR args) {
+        if (!is_dev_mode()) {
+            Msg("! Command available only in -dev_mode");
+            return;
+        }
+        if (!g_pGameLevel || !Actor())
+            return;
+
+        Actor()->TransferInfo(shared_str(args), m_give);
+        Msg("~ Info portion [%s] %s.", args, m_give ? "GIVEN" : "DISABLED");
+    }
+
+    virtual void fill_tips(vecTips& tips, u32 mode) {
+        if (is_dev_mode())
+            tips.push_back("Enter info_portion name (e.g. zat_b14_stalkers_dead)");
+    }
+};
+
+class CCC_JumpToLevelDev : public IConsole_Command {
+public:
+    CCC_JumpToLevelDev(LPCSTR N) : IConsole_Command(N) { bEmptyArgsHandled = false; }
+
+    virtual void Execute(LPCSTR level) {
+        if (!is_dev_mode()) {
+            Msg("! Command available only in -dev_mode");
+            return;
+        }
+        if (!ai().get_alife()) {
+            Msg("! ALife simulator is needed!");
+            return;
+        }
+
+        for (const auto& item : ai().game_graph().header().levels()) {
+            if (item.second.name() == level) {
+                ai().alife().jump_to_level(level);
+                return;
+            }
+        }
+        Msg("! There is no level \"%s\" in the game graph!", level);
+    }
+
+    virtual void fill_tips(vecTips& tips, u32 mode) {
+        if (!is_dev_mode() || !ai().get_alife())
+            return;
+
+        for (const auto& level : ai().game_graph().header().levels())
+            tips.push_back(std::string(level.second.name()));
     }
 };
 
@@ -1056,7 +1313,6 @@ public:
 #endif
 
 #ifdef DEBUG_CAPS
-#include "game_graph.h"
 struct CCC_JumpToLevel : public IConsole_Command {
     CCC_JumpToLevel(LPCSTR N) : IConsole_Command(N){}
 
@@ -1558,8 +1814,10 @@ void CCC_RegisterCommands() {
     // game
     CMD3(CCC_Mask, "g_crouch_toggle", &psActorFlags, AF_CROUCH_TOGGLE);
     CMD1(CCC_GameDifficulty, "g_game_difficulty");
+    CMD1(CCC_GlobalTimeFactorDev, "time_factor");
+    CMD1(CCC_TimeFactorDev, "al_time_factor");
 
-    if (strstr(Core.Params, "-dev_mode")) {
+    if (is_dev_mode()) {
         CMD1(CCC_ReloadLocalization, "reload_localization");
         CMD1(CCC_LocalizationDiagnostics, "localization_diagnostics");
     }
@@ -1579,7 +1837,6 @@ void CCC_RegisterCommands() {
     CMD1(CCC_ClearLog, "clear_log");
 
 #ifdef DEBUG_CAPS
-    CMD1(CCC_ALifeTimeFactor, "al_time_factor");              // set time factor
     CMD1(CCC_ALifeSwitchDistance, "al_switch_distance");      // set switch distance
     CMD1(CCC_ALifeProcessTime, "al_process_time");            // set process time
     CMD1(CCC_ALifeObjectsPerUpdate, "al_objects_per_update"); // set process time
@@ -1601,7 +1858,6 @@ void CCC_RegisterCommands() {
 
 #ifdef DEBUG_CAPS
     CMD4(CCC_Float, "hud_fov", &psHUD_FOV, 0.1f, 1.0f);
-    CMD4(CCC_Float, "fov", &g_fov, 5.0f, 180.0f);
 #endif // DEBUG_CAPS
 
 // Demo
@@ -1741,14 +1997,22 @@ void CCC_RegisterCommands() {
     CMD3(CCC_Mask, "g_no_clip", &psActorFlags, AF_NO_CLIP);
 #endif // DEBUG
 
+    // Runtime developer commands. They remain registered in release builds, but reject execution
+    // unless the engine was started with -dev_mode or -developer_mode.
+    CMD1(CCC_SpawnToInventory, "g_spawn_to_inventory");
+    CMD1(CCC_SpawnToInventory, "g_spawn_to_inv");
+    CMD1(CCC_SpawnToCrosshair, "g_spawn");
+    CMD2(CCC_InfoPortion, "g_info", true);
+    CMD2(CCC_InfoPortion, "d_info", false);
+    CMD1(CCC_JumpToLevelDev, "jump_to_level");
+    CMD3(CCC_Mask_Dev, "g_god", &psActorFlags, AF_GODMODE);
+    CMD3(CCC_Mask_Dev, "g_unlimitedammo", &psActorFlags, AF_UNLIMITEDAMMO);
+    CMD1(CCC_FovDev, "fov");
+
 #ifdef DEBUG_CAPS
-    CMD1(CCC_JumpToLevel, "jump_to_level");
-    CMD3(CCC_Mask, "g_god", &psActorFlags, AF_GODMODE);
-    CMD3(CCC_Mask, "g_unlimitedammo", &psActorFlags, AF_UNLIMITEDAMMO);
     CMD1(CCC_GreedIsGood, "g_greedisgood");
     CMD1(CCC_Script, "run_script");
     CMD1(CCC_ScriptCommand, "run_string");
-    CMD1(CCC_TimeFactor, "time_factor");
 #endif
 
     CMD3(CCC_Mask, "g_autopickup", &psActorFlags, AF_AUTOPICKUP);
