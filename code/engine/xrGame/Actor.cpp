@@ -65,6 +65,7 @@
 #include "InventoryBox.h"
 #include "location_manager.h"
 #include "player_hud.h"
+#include "ItemUseController.h"
 #include "ai/monsters/basemonster/base_monster.h"
 
 #include "xrRender/UIRender.h"
@@ -99,6 +100,7 @@ int psActorSleepTime = 1;
 
 CActor::CActor() : CEntityAlive(), current_ik_cam_shift(0) {
     game_news_registry = xr_new<CGameNewsRegistryWrapper>();
+    m_item_use = xr_new<CItemUseController>(this);
     
     cameras[eacFirstEye] = xr_new<CCameraFirstEye>(this);
     cameras[eacFirstEye]->Load("actor_firsteye_cam");
@@ -196,6 +198,7 @@ CActor::CActor() : CEntityAlive(), current_ik_cam_shift(0) {
 }
 
 CActor::~CActor() {
+    xr_delete(m_item_use);
     xr_delete(m_location_manager);
     xr_delete(m_memory);
     xr_delete(game_news_registry);
@@ -749,6 +752,9 @@ float CActor::currentFOV() {
 }
 
 void CActor::UpdateCL() {
+    if (m_item_use)
+        m_item_use->Update(Device.fTimeDelta);
+
     if (g_Alive() && Level().CurrentViewEntity() == this) {
         if (CurrentGameUI() && nullptr == CurrentGameUI()->TopInputReceiver()) {
             int dik = get_action_dik(kUSE, 0);
@@ -906,7 +912,7 @@ void CActor::set_state_box(u32 mstate) {
 void CActor::shedule_Update(u32 DT) {
     setSVU(OnServer());
 
-    if (IsFocused()) {
+    if (IsFocused() && !(m_item_use && m_item_use->IsActive())) {
         BOOL bHudView = HUDview();
         if (bHudView) {
             if (CInventoryItem* pInvItem = inventory().ActiveItem()) {

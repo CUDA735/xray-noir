@@ -55,6 +55,7 @@ struct hud_item_measures {
 struct attachable_hud_item {
     player_hud* m_parent;
     CHudItem* m_parent_hud_item;
+    bool m_controller_owned;
     shared_str m_sect_name;
     IKinematics* m_model;
     u16 m_attach_place_idx;
@@ -67,7 +68,8 @@ struct attachable_hud_item {
     player_hud_motion_container m_hand_motions;
 
     attachable_hud_item(player_hud* pparent)
-        : m_parent(pparent), m_upd_firedeps_frame(u32(-1)), m_parent_hud_item(NULL) {}
+        : m_parent(pparent), m_parent_hud_item(NULL), m_controller_owned(false),
+          m_upd_firedeps_frame(u32(-1)) {}
     ~attachable_hud_item();
     void load(const shared_str& sect_name);
     void update(bool bForce);
@@ -98,6 +100,10 @@ class player_hud {
 public:
     player_hud();
     ~player_hud();
+
+    attachable_hud_item* attach_controller_item(const shared_str& hud_section);
+    void detach_controller_item();
+
     void load(const shared_str& model_name);
     void load_default() { load("actor_hud_05"); };
     void update(const Fmatrix& trans);
@@ -105,6 +111,7 @@ public:
     void render_item_ui();
     bool render_item_ui_query();
     u32 anim_play(u16 part, const MotionID& M, BOOL bMixIn, const CMotionDef*& md, float speed);
+    u32 play_controller_motion(const shared_str& motion_name, BOOL bMixIn = TRUE);
     const shared_str& section_name() const { return m_sect_name; }
 
     attachable_hud_item* create_hud_item(const shared_str& sect);
@@ -127,6 +134,8 @@ public:
     void OnMovementChanged(ACTOR_DEFS::EMoveCommand cmd);
 
 private:
+    attachable_hud_item* m_controller_item;
+
     void update_inertion(Fmatrix& trans);
     void update_additional(Fmatrix& trans);
     bool inertion_allowed();

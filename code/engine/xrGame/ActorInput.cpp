@@ -33,8 +33,43 @@
 #include "clsid_game.h"
 #include "hudmanager.h"
 #include "Weapon.h"
+#include "ItemUseController.h"
 
 extern u32 hud_adj_mode;
+
+static bool ItemUseBlocksAction(int cmd) {
+    switch (cmd) {
+    case kDETECTOR:
+    case kTORCH:
+    case kNIGHT_VISION:
+    case kWPN_1:
+    case kWPN_2:
+    case kWPN_3:
+    case kWPN_4:
+    case kWPN_5:
+    case kWPN_6:
+    case kARTEFACT:
+    case kWPN_NEXT:
+    case kWPN_FIRE:
+    case kWPN_ZOOM:
+    case kWPN_ZOOM_INC:
+    case kWPN_ZOOM_DEC:
+    case kWPN_RELOAD:
+    case kWPN_FUNC:
+    case kWPN_FIREMODE_PREV:
+    case kWPN_FIREMODE_NEXT:
+    case kNEXT_SLOT:
+    case kPREV_SLOT:
+    case kQUICK_USE_1:
+    case kQUICK_USE_2:
+    case kQUICK_USE_3:
+    case kQUICK_USE_4:
+    case kUSE:
+        return true;
+    default:
+        return false;
+    }
+}
 
 void CActor::IR_OnKeyboardPress(int cmd) {
     if (hud_adj_mode && pInput->iGetAsyncKeyState(DIK_LSHIFT))
@@ -46,6 +81,9 @@ void CActor::IR_OnKeyboardPress(int cmd) {
     if (IsTalking())
         return;
     if (m_input_external_handler && !m_input_external_handler->authorized(cmd))
+        return;
+
+    if (m_item_use && m_item_use->IsWeaponLocked() && ItemUseBlocksAction(cmd))
         return;
 
     switch (cmd) {
@@ -188,6 +226,9 @@ void CActor::IR_OnMouseWheel(int direction) {
         g_player_hud->tune(Ivector().set(0, 0, direction));
         return;
     }
+
+    if (m_item_use && m_item_use->IsWeaponLocked())
+        return;
 
     if (inventory().Action((direction > 0) ? (u16)kWPN_ZOOM_DEC : (u16)kWPN_ZOOM_INC, CMD_START))
         return;

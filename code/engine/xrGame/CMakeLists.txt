@@ -2854,6 +2854,8 @@ set(CORE_CLIENT_OBJECTS_ACTOR_BASE Actor.h
                                    ActorCondition.h
                                    fire_disp_controller.h
                                    Actor.cpp
+                                   ItemUseController.cpp
+                                   ItemUseController.h
                                    actor_communication.cpp
                                    Actor_Events.cpp
                                    Actor_Feel.cpp

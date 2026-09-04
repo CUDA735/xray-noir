@@ -20,6 +20,7 @@
 #include "clsid_game.h"
 #include "static_cast_checked.hpp"
 #include "player_hud.h"
+#include "ItemUseController.h"
 #include "NoirInventorySlots.h"
 
 using namespace InventoryUtilities;
@@ -69,6 +70,7 @@ CInventory::CInventory() {
 
     m_fTotalWeight = -1.f;
     m_dwModifyFrame = 0;
+    m_state_revision = 0;
     m_drop_last_frame = false;
 
     InitPriorityGroupsForQSwitch();
@@ -953,7 +955,6 @@ CInventoryItem* CInventory::get_object_by_id(ALife::_OBJECT_ID tObjectID) {
 #include "script_callback_ex.h"
 #include "script_game_object.h"
 bool CInventory::Eat(PIItem pIItem) {
-    //устанаовить съедобна ли вещь
     CEatableItem* pItemToEat = smart_cast<CEatableItem*>(pIItem);
     if (!pItemToEat)
         return false;
@@ -971,8 +972,64 @@ bool CInventory::Eat(PIItem pIItem) {
         return false;
     if (pInventory != IO->m_inventory)
         return false;
+
+    if (!pItemToEat->object().H_Parent())
+        return false;
+
     if (pItemToEat->object().H_Parent()->ID() != entity_alive->ID())
         return false;
+
+    CActor* actor = smart_cast<CActor*>(entity_alive);
+
+    if (actor && actor->m_inventory == this && actor->GetItemUseController()) {
+        CItemUseController* controller = actor->GetItemUseController();
+
+        if (controller->IsActive())
+            return false;
+
+        if (controller->Start(pIItem))
+            return true;
+    }
+
+    bool became_empty = false;
+
+    if (!ApplyEat(pIItem, became_empty))
+        return false;
+
+    return !became_empty;
+}
+
+bool CInventory::ApplyEat(PIItem pIItem, bool& became_empty, bool spawn_trash) {
+    became_empty = false;
+
+    CEatableItem* pItemToEat = smart_cast<CEatableItem*>(pIItem);
+    if (!pItemToEat)
+        return false;
+
+    CEntityAlive* entity_alive = smart_cast<CEntityAlive*>(m_pOwner);
+    if (!entity_alive)
+        return false;
+
+    CInventoryOwner* inventory_owner = smart_cast<CInventoryOwner*>(entity_alive);
+    if (!inventory_owner)
+        return false;
+
+    CInventory* item_inventory = pItemToEat->m_pInventory;
+    if (!item_inventory || item_inventory != this || item_inventory != inventory_owner->m_inventory)
+        return false;
+
+    if (!pItemToEat->object().H_Parent() ||
+        pItemToEat->object().H_Parent()->ID() != entity_alive->ID()) {
+        return false;
+    }
+
+    shared_str trash_object = NULL;
+    u32 trash_count = 0;
+
+    if (spawn_trash && pItemToEat->HasTrash()) {
+        trash_object = pItemToEat->TrashObject();
+        trash_count = pItemToEat->TrashCount();
+    }
 
     if (!pItemToEat->UseBy(entity_alive))
         return false;
@@ -980,16 +1037,22 @@ bool CInventory::Eat(PIItem pIItem) {
 #ifdef MP_LOGGING
     Msg("--- Actor [%d] use or eat [%d][%s]", entity_alive->ID(), pItemToEat->object().ID(),
         pItemToEat->object().cNameSect().c_str());
-#endif // MP_LOGGING
+#endif
 
-    if (IsGameTypeSingle() && Actor()->m_inventory == this)
-        Actor()->callback(GameObject::eUseObject)(
+    if (spawn_trash && trash_object.size() && trash_count > 0)
+        SpawnConsumableTrash(entity_alive, trash_object, trash_count);
+
+    CActor* actor = smart_cast<CActor*>(entity_alive);
+    if (IsGameTypeSingle() && actor && actor->m_inventory == this) {
+        actor->callback(GameObject::eUseObject)(
             (smart_cast<CGameObject*>(pIItem))->lua_game_object());
+    }
 
     if (pItemToEat->Empty()) {
         pIItem->SetDropManual(TRUE);
-        return false;
+        became_empty = true;
     }
+
     return true;
 }
 

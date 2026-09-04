@@ -102,6 +102,7 @@ public:
     PIItem GetItemFromInventory(LPCSTR caItemName);
 
     bool Eat(PIItem pIItem);
+    bool ApplyEat(PIItem pIItem, bool& became_empty, bool spawn_trash = true);
     bool ClientEat(PIItem pIItem);
 
     IC u16 GetActiveSlot() const { return m_iActiveSlot; }
@@ -144,7 +145,15 @@ public:
     friend class CInventoryOwner;
 
     u32 ModifyFrame() const { return m_dwModifyFrame; }
-    void InvalidateState() { m_dwModifyFrame = Device.dwFrame; }
+    u32 StateRevision() const { return m_state_revision; }
+
+    void InvalidateState() {
+        m_dwModifyFrame = Device.dwFrame;
+
+        ++m_state_revision;
+        if (m_state_revision == 0)
+            m_state_revision = 1;
+    }
     void Items_SetCurrentEntityHud(bool current_entity);
     bool isBeautifulForActiveSlot(CInventoryItem* pIItem);
 
@@ -172,6 +181,7 @@ protected:
 
     //кадр на котором произошло последнее изменение в инвенторе
     u32 m_dwModifyFrame;
+    u32 m_state_revision;
 
     bool m_drop_last_frame;
 

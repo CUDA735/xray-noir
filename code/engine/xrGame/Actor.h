@@ -59,6 +59,7 @@ class CActorMemory;
 class CActorStatisticMgr;
 
 class CLocationManager;
+class CItemUseController;
 
 class CActor : public CEntityAlive,
                public IInputReceiver,
@@ -79,6 +80,8 @@ private:
 public:
     CActor();
     virtual ~CActor() override;
+
+    [[nodiscard]] CItemUseController* GetItemUseController() const { return m_item_use; }
 
 public:
     [[nodiscard]] virtual BOOL AlwaysTheCrow() override { return TRUE; }
@@ -265,6 +268,7 @@ public:
     [[nodiscard]] virtual bool can_attach(const CInventoryItem* inventory_item) const override;
 
 protected:
+    CItemUseController* m_item_use = nullptr;
     CHolderCustom* m_holder = nullptr;
     u16 m_holderID = u16(-1);
     bool use_Holder(CHolderCustom* holder);
