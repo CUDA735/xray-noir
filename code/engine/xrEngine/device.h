@@ -17,6 +17,7 @@
 //#include "R_Backend.h"
 
 #define VIEWPORT_NEAR 0.2f
+#define STATIONARY_NEAR 0.01f
 //#define IE_VIEWPORT_NEAR 0.013f
 
 ENGINE_API extern float IE_VIEWPORT_NEAR;
