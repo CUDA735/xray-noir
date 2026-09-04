@@ -161,27 +161,23 @@ void CBulletManager::FireShotmark(SBullet* bullet, const Fvector& vDir, const Fv
     Fvector particle_dir = vNormal;
 
     if (R.O) {
-        /*  add_SkeletonWallmark not implemented now...
-                        particle_dir		 = vDir;
-                        particle_dir.invert	();
+        particle_dir = vDir;
+        particle_dir.invert();
 
-                        //на текущем актере отметок не ставим
-                        if(Level().CurrentEntity() && Level().CurrentEntity()->ID() == R.O->ID())
-           return;
+        const bool is_current_entity =
+            Level().CurrentEntity() && Level().CurrentEntity()->ID() == R.O->ID();
 
-                        if (mtl_pair && !mtl_pair->m_pCollideMarks->empty() && ShowMark)
-                        {
-                                //добавить отметку на материале
-                                Fvector p;
-                                p.mad(bullet->bullet_pos,bullet->dir,R.range-0.01f);
-                                ::Render->add_SkeletonWallmark	(	&R.O->renderable.xform,
-                                                                                                        PKinematics(R.O->Visual()),
-                                                                                                        &*mtl_pair->m_pCollideMarks,
-                                                                                                        p,
-                                                                                                        bullet->dir,
-                                                                                                        bullet->wallmark_size);
-                        }
-        */
+        IKinematics* kinematics = smart_cast<IKinematics*>(R.O->Visual());
+
+        if (!is_current_entity && kinematics && mtl_pair &&
+            !mtl_pair->m_pCollideMarks->empty() && ShowMark) {
+            Fvector start;
+            start.mad(bullet->bullet_pos, bullet->dir, R.range - 0.01f);
+
+            ::Render->add_SkeletonWallmark(&R.O->renderable.xform, kinematics,
+                                           &*mtl_pair->m_pCollideMarks, start,
+                                           bullet->dir, bullet->wallmark_size);
+        }
     } else {
         //вычислить нормаль к пораженной поверхности
         Fvector* pVerts = Level().ObjectSpace.GetStaticVerts();

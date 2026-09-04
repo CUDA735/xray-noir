@@ -24,7 +24,8 @@
 #include "trade_parameters.h"
 #include "clsid_game.h"
 
-u32 get_rank(const shared_str&) { return -1; }
+// Single-player item selection must not depend on multiplayer rank tables.
+u32 get_rank(const shared_str&) { return 0; }
 
 static const int MAX_AMMO_ATTACH_COUNT = 1;
 static const int enough_ammo_box_count = 1;
