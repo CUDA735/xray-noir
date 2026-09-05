@@ -688,6 +688,15 @@ HRESULT CRender::shader_compile(LPCSTR name, DWORD const* pSrcData, UINT SrcData
     char sh_name[MAX_PATH] = "";
     u32 len = 0;
 
+    // Shader resource options are encoded in the resource name so variants
+    // retain independent cache directories. The source loader removes the
+    // suffix only when resolving the physical .ps/.vs file.
+    if (strstr(name, "(USE_PBR)")) {
+        defines[def_it].Name = "USE_PBR";
+        defines[def_it].Definition = "1";
+        def_it++;
+    }
+
     // options
     {
         xr_sprintf(c_smapsize, "%04d", u32(o.smapsize));

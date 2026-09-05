@@ -75,9 +75,16 @@ void CTextureDescrMngr::LoadTHM(LPCSTR initial) {
             }
 
             desc.bHasSpec = true;
-            desc.spec.m_material = tp.material + tp.material_weight;
+            const bool isPBR = tp.material == STextureParams::tmPBR_Material;
+
+            // The legacy renderers address a four-slice material LUT. PBR is a
+            // texture-layout marker, not a fifth LUT slice, so give R2/R3 a
+            // defined Blinn fallback instead of letting material 4 wrap around.
+            desc.spec.m_material = isPBR
+                ? float(STextureParams::tmBlin_Phong)
+                : tp.material + tp.material_weight;
             desc.spec.m_use_steep_parallax = false;
-            desc.spec.m_use_pbr = (tp.material == STextureParams::tmPBR_Material);
+            desc.spec.m_use_pbr = isPBR;
 
             if (tp.bump_mode == STextureParams::tbmUse) {
                 desc.spec.m_bump_name = tp.bump_name;
