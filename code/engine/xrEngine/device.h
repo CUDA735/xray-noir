@@ -57,6 +57,9 @@ public:
     u32 dwFrame;
 
     float fTimeDelta;
+    // Real, unpaused wall-clock time between rendered frames. This is intended
+    // for frame-driven tools (for example debug free flight), not simulation.
+    float fTimeDeltaReal;
     float fTimeGlobal;
     u32 dwTimeDelta;
     u32 dwTimeGlobal;
@@ -85,6 +88,7 @@ protected:
     u32 Timer_MM_Delta;
     CTimer_paused Timer;
     CTimer_paused TimerGlobal;
+    CTimer TimerFrame;
 
 public:
     // Registrators
@@ -210,6 +214,7 @@ public:
         b_is_Active = FALSE;
         b_is_Ready = FALSE;
         Timer.Start();
+        TimerFrame.Start();
         m_bNearer = FALSE;
     };
 

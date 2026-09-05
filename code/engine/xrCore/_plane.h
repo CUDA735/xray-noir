@@ -136,12 +136,12 @@ public:
     }
 
     inline SelfRef transform(SelfCRef P, const _matrix<T>& M) noexcept {
-        _vector3<T> p, d;
-        p.mul(P.n, -P.d);
+        _vector3<T> point, transformedPoint;
+        point.mul(P.n, -P.d);
         M.transform_dir(n, P.n);
         n.normalize();
-        M.transform_tiny(d, p);
-        d = -n.dotproduct(d);
+        M.transform_tiny(transformedPoint, point);
+        d = -n.dotproduct(transformedPoint);
         return *this;
     }
 };

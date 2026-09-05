@@ -366,6 +366,12 @@ void CRenderDevice::FrameMove() {
 
     dwTimeContinual = TimerMM.GetElapsed_ms() - app_inactive_time;
 
+    // Keep an unpaused wall-clock delta for frame-driven tools. In particular,
+    // debug free flight must remain usable while the simulation timer is paused.
+    fTimeDeltaReal = TimerFrame.GetElapsed_sec();
+    TimerFrame.Start();
+    if (!xr::valid(fTimeDeltaReal) || fTimeDeltaReal < 0.f)
+        fTimeDeltaReal = 0.f;
     if (psDeviceFlags.test(rsConstantFPS)) {
         // 20ms = 50fps
         // fTimeDelta		=	0.020f;
@@ -389,9 +395,12 @@ void CRenderDevice::FrameMove() {
 		if (fTimeDelta > .1f)
             fTimeDelta = .1f; // limit to 10fps minimum (нижня межа)
 
-        // Фікс блимання партиклів при надвисокому FPS:
-        if (fTimeDelta < 0.003f) 
-            fTimeDelta = 0.003f; // limit to ~333fps maximum (верхня межа)
+        // Never clamp a frame delta up to a positive minimum. Doing so makes
+        // simulation time run faster than real time whenever FPS exceeds the
+        // corresponding limit. A zero delta is valid: the fixed-step physics
+        // accumulator simply waits for measurable wall-clock time.
+        if (!xr::valid(fTimeDelta) || fTimeDelta < 0.f)
+            fTimeDelta = 0.f;
 
         if (Paused())
             fTimeDelta = 0.0f;

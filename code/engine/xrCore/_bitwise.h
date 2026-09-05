@@ -3,8 +3,8 @@
 #define _BITWISE_
 
 #include <cmath>
-#include <intrin.h>
-#include <immintrin.h>
+#include <limits>
+#include <xmmintrin.h>
 
 // float values defines
 constexpr u32 fdSGN  = 0x080000000;  // mask for sign bit
@@ -44,27 +44,40 @@ inline void set_positive(float& f) noexcept { f = std::abs(f); }
 }
 
 [[nodiscard]] inline u8 btwCount1(u8 v) noexcept {
-    return static_cast<u8>(__popcnt16(static_cast<u16>(v)));
+    u32 value = v;
+    value -= (value >> 1) & 0x55u;
+    value = (value & 0x33u) + ((value >> 2) & 0x33u);
+    return static_cast<u8>((value + (value >> 4)) & 0x0fu);
 }
 
 [[nodiscard]] inline u32 btwCount1(u32 v) noexcept {
-    return __popcnt(v);
+    v -= (v >> 1) & 0x55555555u;
+    v = (v & 0x33333333u) + ((v >> 2) & 0x33333333u);
+    v = (v + (v >> 4)) & 0x0f0f0f0fu;
+    return (v * 0x01010101u) >> 24;
 }
 
 [[nodiscard]] inline u64 btwCount1(u64 v) noexcept {
-#ifdef _M_AMD64
-    return __popcnt64(v);
-#else
-    return __popcnt(static_cast<u32>(v)) + __popcnt(static_cast<u32>(v >> 32));
-#endif
+    v -= (v >> 1) & 0x5555555555555555ull;
+    v = (v & 0x3333333333333333ull) + ((v >> 2) & 0x3333333333333333ull);
+    v = (v + (v >> 4)) & 0x0f0f0f0f0f0f0f0full;
+    return (v * 0x0101010101010101ull) >> 56;
 }
 
 [[nodiscard]] inline int iFloor(float x) noexcept {
-    return _mm_cvt_ss2si(_mm_round_ss(_mm_set_ss(x), _mm_set_ss(x), _MM_FROUND_TO_NEG_INF | _MM_FROUND_NO_EXC));
+    const int truncated = _mm_cvtt_ss2si(_mm_set_ss(x));
+    if (truncated == std::numeric_limits<int>::min())
+        return truncated;
+
+    return truncated - (static_cast<float>(truncated) > x ? 1 : 0);
 }
 
 [[nodiscard]] inline int iCeil(float x) noexcept {
-    return _mm_cvt_ss2si(_mm_round_ss(_mm_set_ss(x), _mm_set_ss(x), _MM_FROUND_TO_POS_INF | _MM_FROUND_NO_EXC));
+    const int truncated = _mm_cvtt_ss2si(_mm_set_ss(x));
+    if (truncated == std::numeric_limits<int>::min())
+        return truncated;
+
+    return truncated + (static_cast<float>(truncated) < x ? 1 : 0);
 }
 
 [[nodiscard]] inline bool fis_gremlin(const float& f) noexcept {

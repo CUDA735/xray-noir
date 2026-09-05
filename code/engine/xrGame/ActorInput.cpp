@@ -657,6 +657,9 @@ void CActor::SwitchTorch() {
 
 #ifdef DEBUG
 void CActor::NoClipFly(int cmd) {
+    // Preserve the old 0.1 units-per-frame feel at 60 FPS without tying speed to FPS.
+    constexpr float NO_CLIP_SPEED = 6.0f;
+
     Fvector cur_pos; // = Position();
     cur_pos.set(0, 0, 0);
     float scale = 1.0f;
@@ -711,7 +714,8 @@ void CActor::NoClipFly(int cmd) {
         ActorUse();
         break;
     }
-    cur_pos.mul(scale);
+    const float frame_delta = std::clamp(Device.fTimeDeltaReal, 0.f, 0.1f);
+    cur_pos.mul(scale * NO_CLIP_SPEED * frame_delta);
     Fmatrix mOrient;
     mOrient.rotateY(-(cam_Active()->GetWorldYaw()));
     mOrient.transform_dir(cur_pos);
