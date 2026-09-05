@@ -77,6 +77,7 @@ void CTextureDescrMngr::LoadTHM(LPCSTR initial) {
             desc.bHasSpec = true;
             desc.spec.m_material = tp.material + tp.material_weight;
             desc.spec.m_use_steep_parallax = false;
+            desc.spec.m_use_pbr = (tp.material == STextureParams::tmPBR_Material);
 
             if (tp.bump_mode == STextureParams::tbmUse) {
                 desc.spec.m_bump_name = tp.bump_name;
@@ -128,6 +129,14 @@ BOOL CTextureDescrMngr::UseSteepParallax(const shared_str& tex_name) const {
     const auto it = m_texture_details.find(tex_name);
     if (it != m_texture_details.end() && it->second.bHasSpec) {
         return it->second.spec.m_use_steep_parallax;
+    }
+    return FALSE;
+}
+
+BOOL CTextureDescrMngr::UsePBRTextures(const shared_str& tex_name) const {
+    const auto it = m_texture_details.find(tex_name);
+    if (it != m_texture_details.end() && it->second.bHasSpec) {
+        return it->second.spec.m_use_pbr;
     }
     return FALSE;
 }

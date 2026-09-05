@@ -16,6 +16,7 @@ class CTextureDescrMngr {
         shared_str m_bump_name;
         float m_material{ 1.0f };
         bool m_use_steep_parallax{ false };
+        bool m_use_pbr{ false };
     };
 
     // МАКСИМАЛЬНА ОПТИМІЗАЦІЯ: Inline-зберігання даних замість вказівників.
@@ -46,6 +47,7 @@ public:
     [[nodiscard]] shared_str GetBumpName(const shared_str& tex_name) const;
     [[nodiscard]] float GetMaterial(const shared_str& tex_name) const;
     [[nodiscard]] BOOL UseSteepParallax(const shared_str& tex_name) const;
+    [[nodiscard]] BOOL UsePBRTextures(const shared_str& tex_name) const;
     
     void GetTextureUsage(const shared_str& tex_name, BOOL& bDiffuse, BOOL& bBump) const;
     BOOL GetDetailTexture(const shared_str& tex_name, LPCSTR& res, R_constant_setup*& CS) const;

@@ -22,7 +22,7 @@
 #include <shellapi.h>
 
 #include "object_broker.h"
-//#include "../xrRenderCommon/infernis_pbr_settings.h"
+#include "../xrRenderCommon/infernis_pbr_settings.h"
 
 string128 ErrMsgBoxTemplate[] = { "message_box_invalid_host",
                                   "message_box_session_full",
@@ -631,8 +631,7 @@ LPCSTR CMainMenu::GetGSVer() {
 
 #ifdef _M_X64
     string256 fname;
-    //bool usePBR = infernis_pbr_rendering_enabled();
-    bool usePBR = false; // Тимчасова заглушка, поки не буде реалізовано перевірку на PBR
+    bool usePBR = infernis_pbr_rendering_enabled();
 
     if (usePBR) {
         xr_strcpy(buff, 255, "0.2.5 x64 PBR");
