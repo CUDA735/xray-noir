@@ -135,7 +135,8 @@ surface_bumped sload_i(p_bumped I)
     half2 normalXY = Nu.wz * 2.0h - 1.0h;
     S.normal.xy = normalXY;
     S.normal.z = sqrt(saturate(1.0h - dot(normalXY, normalXY)));
-    S.gloss = saturate(1.0h - NuE.g);
+    half smoothness = saturate(1.0h - NuE.g);
+    S.gloss = smoothness * smoothness * 0.35h;
     S.height = Nu.r;
 #else
     S.normal = Nu.wzy + (NuE.xyz - 1.0h);
