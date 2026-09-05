@@ -64,6 +64,147 @@ u32 calc_texture_size(int lod, u32 mip_cnt, u32 orig_size) {
 
 constexpr float _BUMPHEIGH = 8.f;
 
+namespace {
+constexpr u32 XR_DDS_MAGIC = MAKEFOURCC('D', 'D', 'S', ' ');
+constexpr u32 XR_DDS_FOURCC = 0x00000004;
+constexpr u32 XR_DDS_FOURCC_DX10 = MAKEFOURCC('D', 'X', '1', '0');
+constexpr u32 XR_DDS_RESOURCE_DIMENSION_TEXTURE2D = 3;
+constexpr u32 XR_DDS_RESOURCE_MISC_TEXTURECUBE = 0x00000004;
+constexpr u32 XR_DDS_CAPS2_CUBEMAP_ALL_FACES = 0x0000FE00;
+
+// Values from DXGI_FORMAT. They are kept local so the D3D9 renderers do not
+// need a Direct3D 10/11 header dependency merely to inspect a DDS header.
+constexpr u32 XR_DDS_DXGI_FORMAT_BC1_UNORM = 71;
+constexpr u32 XR_DDS_DXGI_FORMAT_BC1_UNORM_SRGB = 72;
+constexpr u32 XR_DDS_DXGI_FORMAT_BC2_UNORM = 74;
+constexpr u32 XR_DDS_DXGI_FORMAT_BC2_UNORM_SRGB = 75;
+constexpr u32 XR_DDS_DXGI_FORMAT_BC3_UNORM = 77;
+constexpr u32 XR_DDS_DXGI_FORMAT_BC3_UNORM_SRGB = 78;
+
+#pragma pack(push, 1)
+struct SDDS_PIXELFORMAT {
+    u32 size;
+    u32 flags;
+    u32 fourCC;
+    u32 rgbBitCount;
+    u32 rBitMask;
+    u32 gBitMask;
+    u32 bBitMask;
+    u32 aBitMask;
+};
+
+struct SDDS_HEADER {
+    u32 size;
+    u32 flags;
+    u32 height;
+    u32 width;
+    u32 pitchOrLinearSize;
+    u32 depth;
+    u32 mipMapCount;
+    u32 reserved1[11];
+    SDDS_PIXELFORMAT pixelFormat;
+    u32 caps;
+    u32 caps2;
+    u32 caps3;
+    u32 caps4;
+    u32 reserved2;
+};
+
+struct SDDS_HEADER_DXT10 {
+    u32 dxgiFormat;
+    u32 resourceDimension;
+    u32 miscFlag;
+    u32 arraySize;
+    u32 miscFlags2;
+};
+#pragma pack(pop)
+
+static_assert(sizeof(SDDS_PIXELFORMAT) == 32, "Unexpected DDS pixel format size");
+static_assert(sizeof(SDDS_HEADER) == 124, "Unexpected DDS header size");
+static_assert(sizeof(SDDS_HEADER_DXT10) == 20, "Unexpected DX10 DDS header size");
+
+bool prepare_dds_for_d3d9(LPCVOID sourceData, u32 sourceSize, LPCSTR textureName,
+                          xr_vector<u8>& convertedData, LPCVOID& resultData, u32& resultSize) {
+    resultData = sourceData;
+    resultSize = sourceSize;
+    convertedData.clear();
+
+    constexpr u32 legacyHeaderSize = sizeof(u32) + sizeof(SDDS_HEADER);
+    constexpr u32 dx10HeaderSize = legacyHeaderSize + sizeof(SDDS_HEADER_DXT10);
+
+    if (!sourceData || sourceSize < legacyHeaderSize)
+        return true;
+
+    const u8* sourceBytes = static_cast<const u8*>(sourceData);
+    u32 magic = 0;
+    SDDS_HEADER header{};
+    std::memcpy(&magic, sourceBytes, sizeof(magic));
+    std::memcpy(&header, sourceBytes + sizeof(magic), sizeof(header));
+
+    if (magic != XR_DDS_MAGIC || header.pixelFormat.fourCC != XR_DDS_FOURCC_DX10)
+        return true;
+
+    if (sourceSize < dx10HeaderSize || header.size != sizeof(SDDS_HEADER) ||
+        header.pixelFormat.size != sizeof(SDDS_PIXELFORMAT) ||
+        !(header.pixelFormat.flags & XR_DDS_FOURCC)) {
+        Msg("! D3D9 DDS bridge: malformed DX10 header in '%s'", textureName);
+        return false;
+    }
+
+    SDDS_HEADER_DXT10 header10{};
+    std::memcpy(&header10, sourceBytes + legacyHeaderSize, sizeof(header10));
+
+    if (header10.resourceDimension != XR_DDS_RESOURCE_DIMENSION_TEXTURE2D ||
+        header10.arraySize != 1 ||
+        (header10.miscFlag & ~XR_DDS_RESOURCE_MISC_TEXTURECUBE)) {
+        Msg("! D3D9 DDS bridge: unsupported DX10 resource in '%s' "
+            "(dimension=%u, array=%u, misc=0x%08x)",
+            textureName, header10.resourceDimension, header10.arraySize, header10.miscFlag);
+        return false;
+    }
+
+    u32 legacyFourCC = 0;
+    switch (header10.dxgiFormat) {
+    case XR_DDS_DXGI_FORMAT_BC1_UNORM:
+    case XR_DDS_DXGI_FORMAT_BC1_UNORM_SRGB:
+        legacyFourCC = MAKEFOURCC('D', 'X', 'T', '1');
+        break;
+    case XR_DDS_DXGI_FORMAT_BC2_UNORM:
+    case XR_DDS_DXGI_FORMAT_BC2_UNORM_SRGB:
+        legacyFourCC = MAKEFOURCC('D', 'X', 'T', '3');
+        break;
+    case XR_DDS_DXGI_FORMAT_BC3_UNORM:
+    case XR_DDS_DXGI_FORMAT_BC3_UNORM_SRGB:
+        legacyFourCC = MAKEFOURCC('D', 'X', 'T', '5');
+        break;
+    default:
+        Msg("! D3D9 DDS bridge: DXGI format %u in '%s' has no lossless D3D9 mapping",
+            header10.dxgiFormat, textureName);
+        return false;
+    }
+
+    header.pixelFormat.fourCC = legacyFourCC;
+    if (header10.miscFlag & XR_DDS_RESOURCE_MISC_TEXTURECUBE)
+        header.caps2 |= XR_DDS_CAPS2_CUBEMAP_ALL_FACES;
+
+    convertedData.resize(sourceSize - sizeof(SDDS_HEADER_DXT10));
+    u8* resultBytes = &convertedData[0];
+    std::memcpy(resultBytes, &magic, sizeof(magic));
+    std::memcpy(resultBytes + sizeof(magic), &header, sizeof(header));
+    std::memcpy(resultBytes + legacyHeaderSize, sourceBytes + dx10HeaderSize,
+                sourceSize - dx10HeaderSize);
+
+    resultData = resultBytes;
+    resultSize = static_cast<u32>(convertedData.size());
+
+#ifdef DEBUG
+    Msg("* D3D9 DDS bridge: adapted DXGI format %u in '%s' without recompression",
+        header10.dxgiFormat, textureName);
+#endif
+    return true;
+}
+} // namespace
+
 //////////////////////////////////////////////////////////////////////
 // Utility pack
 //////////////////////////////////////////////////////////////////////
@@ -239,6 +380,10 @@ ID3DBaseTexture* CRender::texture_load(LPCSTR fRName, u32& ret_msize) {
     int img_loaded_lod = 0;
     D3DFORMAT fmt;
     u32 mip_cnt = static_cast<u32>(-1);
+    D3DXIMAGE_INFO IMG{};
+    xr_vector<u8> d3d9DDSData;
+    LPCVOID ddsData = nullptr;
+    u32 ddsSize = 0;
 
     R_ASSERT(fRName);
     R_ASSERT(fRName[0]);
@@ -267,15 +412,24 @@ ID3DBaseTexture* CRender::texture_load(LPCSTR fRName, u32& ret_msize) {
 #endif
 
 _DDS: {
-    D3DXIMAGE_INFO IMG;
     S = FS.r_open(fn);
 #ifdef DEBUG
     Msg("* Loaded: %s[%d]b", fn, S->length());
 #endif
-    img_size = S->length();
     R_ASSERT(S);
+
+    if (!prepare_dds_for_d3d9(S->pointer(), S->length(), fn, d3d9DDSData, ddsData, ddsSize)) {
+        FS.r_close(S);
+        string_path temp;
+        R_ASSERT(FS.exist(temp, "$game_textures$", "ed\\ed_not_existing_texture", ".dds"));
+        R_ASSERT(xr_strcmp(temp, fn));
+        xr_strcpy(fn, temp);
+        goto _DDS;
+    }
+
+    img_size = ddsSize;
     {
-        HRESULT const result = D3DXGetImageInfoFromFileInMemory(S->pointer(), S->length(), &IMG);
+        HRESULT const result = D3DXGetImageInfoFromFileInMemory(ddsData, ddsSize, &IMG);
         if (FAILED(result)) {
             LogMsg("! Can't get image info for texture '{}'", fn);
             FS.r_close(S);
@@ -294,7 +448,7 @@ _DDS: {
 
 _DDS_CUBE: {
     HRESULT const result = D3DXCreateCubeTextureFromFileInMemoryEx(
-        HW.pDevice, S->pointer(), S->length(), D3DX_DEFAULT, IMG.MipLevels, 0, IMG.Format,
+        HW.pDevice, ddsData, ddsSize, D3DX_DEFAULT, IMG.MipLevels, 0, IMG.Format,
         D3DPOOL_MANAGED, D3DX_DEFAULT, D3DX_DEFAULT, 0, &IMG, nullptr, &pTextureCUBE);
     FS.r_close(S);
 
@@ -319,7 +473,7 @@ _DDS_2D: {
     strlwr(fn);
     ID3DTexture2D* T_sysmem;
     HRESULT const result = D3DXCreateTextureFromFileInMemoryEx(
-        HW.pDevice, S->pointer(), S->length(), D3DX_DEFAULT, D3DX_DEFAULT, IMG.MipLevels, 0,
+        HW.pDevice, ddsData, ddsSize, D3DX_DEFAULT, D3DX_DEFAULT, IMG.MipLevels, 0,
         IMG.Format, D3DPOOL_SYSTEMMEM, D3DX_DEFAULT, D3DX_DEFAULT, 0, &IMG, nullptr, &T_sysmem);
     FS.r_close(S);
 
@@ -351,14 +505,20 @@ _BUMP_from_base: {
         R_ASSERT2(FS.exist(fn, "$game_textures$", "ed\\ed_dummy_bump#", ".dds"), "ed_dummy_bump#");
         S = FS.r_open(fn);
         R_ASSERT2(S, fn);
-        img_size = S->length();
+        ddsData = S->pointer();
+        ddsSize = S->length();
+        img_size = ddsSize;
+        R_CHK2(D3DXGetImageInfoFromFileInMemory(ddsData, ddsSize, &IMG), fn);
         goto _DDS_2D;
     }
     if (strstr(fname, "_bump")) {
         R_ASSERT2(FS.exist(fn, "$game_textures$", "ed\\ed_dummy_bump", ".dds"), "ed_dummy_bump");
         S = FS.r_open(fn);
         R_ASSERT2(S, fn);
-        img_size = S->length();
+        ddsData = S->pointer();
+        ddsSize = S->length();
+        img_size = ddsSize;
+        R_CHK2(D3DXGetImageInfoFromFileInMemory(ddsData, ddsSize, &IMG), fn);
         goto _DDS_2D;
     }
 #endif
@@ -366,13 +526,19 @@ _BUMP_from_base: {
     *strstr(fname, "_bump") = 0;
     R_ASSERT2(FS.exist(fn, "$game_textures$", fname, ".dds"), fname);
 
-    D3DXIMAGE_INFO IMG;
     S = FS.r_open(fn);
-    img_size = S->length();
+    R_ASSERT(S);
+
+    if (!prepare_dds_for_d3d9(S->pointer(), S->length(), fn, d3d9DDSData, ddsData, ddsSize)) {
+        FS.r_close(S);
+        return nullptr;
+    }
+
+    img_size = ddsSize;
     ID3DTexture2D* T_base = nullptr;
     
     R_CHK2(D3DXCreateTextureFromFileInMemoryEx(
-               HW.pDevice, S->pointer(), S->length(), D3DX_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0,
+               HW.pDevice, ddsData, ddsSize, D3DX_DEFAULT, D3DX_DEFAULT, D3DX_DEFAULT, 0,
                D3DFMT_A8R8G8B8, D3DPOOL_SYSTEMMEM, D3DX_DEFAULT, D3DX_DEFAULT, 0, &IMG, nullptr, &T_base),
            fn);
     FS.r_close(S);
@@ -421,4 +587,4 @@ _BUMP_from_base: {
     ret_msize = calc_texture_size(img_loaded_lod, mip_cnt, img_size);
     return T_normal_1C;
 }
-} 
+}
