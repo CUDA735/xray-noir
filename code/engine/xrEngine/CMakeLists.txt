@@ -153,8 +153,8 @@ set(ENGINE_TEXT_EDITOR_EDIT_ACTIONS edit_actions.h
 
 set(GENERAL_RESOURCES resource.h
                       resource.rc
-                      splash_xrcs_en.bmp
-                      stalker_cs.ico)
+                      splash_ie.bmp
+                      stalker_ie.ico)
 
 set(ENGINE_CONSOLE XR_IOConsole.h
                    XR_IOConsole.cpp

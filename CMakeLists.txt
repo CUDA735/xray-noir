@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 
-project(xray-1.6.2)
+project(infernis-engine)
 
 if (CMAKE_SIZEOF_VOID_P EQUAL 4)
     set(ARCH_X86 TRUE)
